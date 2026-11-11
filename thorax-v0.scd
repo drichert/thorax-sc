@@ -7,7 +7,7 @@
 (
 ~thoraxMakeTrackDef = {
     SynthDef(\thoraxTrack, {
-        |out = 0, buf = 0, voice = 0, sourceMode = 0,
+        |out = 0, buf = 0, voice = 0, sourceMode = 0, inputGain = 0.25,
          amp = 0.13, grainMix = 0.8, density = 15,
          grainDur = 0.22, pitch = 1, position = 0.35,
          scanHz = 0.015, spray = 0.025,
@@ -85,7 +85,9 @@
                   * Decay2.kr(Dust.kr(0.8 + (voice * 0.3)), 0.01, 0.65),
                 (base * 6).clip(100, 7000), 0.26
             );
-        external = SoundIn.ar([0, 1]);
+        // Attenuate live audio before it reaches direct playback, capture and feedback.
+        // A 40 ms ramp prevents level clicks when using the GUI.
+        external = SoundIn.ar([0, 1]) * Lag.kr(inputGain.clip(0, 2), 0.04);
         material = (internal * (1 - sourceMode.clip(0, 1)))
                  + (external * sourceMode.clip(0, 1));
 
@@ -206,7 +208,7 @@ if(~thoraxCompileOnly != true, { ~thoraxStart.value; });
 // ~thoraxTracks[0].set(\spray, 0.12, \density, 30, \grainDur, 0.09);
 // ~thoraxTracks[1].set(\feedback, 0.65, \drive, 0.5, \ringMix, 0.8);
 // ~thoraxTracks[2].set(\pitch, -1, \scanHz, -0.02, \space, 0.7);
-// ~thoraxTracks[3].set(\sourceMode, 1); // Stereo live input.
+// ~thoraxTracks[3].set(\sourceMode, 1, \inputGain, 0.25); // Live input at -12 dB approx.
 // ~thoraxTracks.do({ |t| t.set(\amp, 0.07); });
 // Four independent modulators per track, depth = 0 until enabled.
 // ~thoraxTracks[0].set(\mod1Wave, 0, \mod1Target, 1, \mod1Rate, 0.2, \mod1Depth, 0.5);
