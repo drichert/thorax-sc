@@ -47,13 +47,25 @@ Each of the four tracks is a separate instance of the same SynthDef, with its ow
 - [ ] Add audio-recording and live-input tests, with deterministic buffer lifecycle
 - [ ] Add stereo capture and stereo granular reading
 - [x] Add a first-pass GUI panel for listening to parameter sweeps (not a production GUI)
-- [ ] Introduce per-track modulation sources and destination mappings
+- [x] Introduce four per-track modulators with source/target/rate/depth routing
+- [ ] Evaluate modulation listening, CPU overhead, and control ranges on the Latitude
+- [ ] Add modulation-to-modulation routing or per-source envelopes based on listening
 - [ ] Introduce scenes, macros, and OSC/MIDI control
 - [ ] Explore safe cross-track sends and recursive spectral processing
 
 ## Control fluidity experiments
 
 The basic Qt slider panel exists to expose discontinuities and zippering before choosing control smoothing. Keep GUI-driven values distinct from audio-engine smoothing: sliders send numerical Synth.set messages directly, and the engine does not yet apply a dedicated lag stage to every parameter. This is deliberate so audible discontinuities can be identified. The GUI retains the values commanded from that panel per track but does not query parameters back from the Synths.
+
+## First modulation matrix (v0.2)
+
+Each track SynthDef contains four modulation slots with four controls per slot: wave, target, rate, and depth. Default depth and target are zero to preserve the v0.1 sound.
+
+Each slot produces a control-rate waveform. Its selected target determines where it is applied; slots with the same target are summed and clipped to a normalized +/-1. Destination-specific amounts are musical, not unrestricted offsets: relative buffer-position shifts, mix offsets, bounded scan and density changes, octave-like exponential pitch/length/frequency changes.
+
+Final destination limits are enforced after summing modulation, especially feedback. No language-side high-frequency scheduling is required. Stepped random can intentionally produce discontinuities.
+
+Limitations: envelope modes are free-running periodic decays, not audio-following or externally gated; no clock synchronization, modulation-to-modulation routing, phase reset, or persistent scenes.
 
 ## Testing strategy
 
