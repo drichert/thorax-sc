@@ -33,7 +33,7 @@
 
         // Independent buffer read position; negative scanHz scans backwards.
         phase = Phasor.kr(0, scanHz / ControlRate.ir, 0, 1);
-        drift = LFNoise1.kr(0.2 + (evolve * 2)).range(-spray, spray);
+        drift = LFNoise1.kr(0.2 + (evolve * 2)).range(spray.neg, spray);
         readPos = (phase + position + drift).wrap(0.002, 0.998);
 
         grainTrigger = Dust.kr(
