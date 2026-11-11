@@ -1,5 +1,76 @@
 # Thorax-SC
 
-An experimental SuperCollider sound-sculpting instrument inspired by the Torso Electronics S-4.
+An experimental four-track sound-sculpting instrument written in SuperCollider, inspired by the **behavior**, rather than the hardware interface, of the Torso Electronics S-4.
 
-Initial instrument implementation and architecture are being developed on a feature branch.
+**Status:** v0.1 exploration. The sound engine and a headless SynthDef compilation test are included. An actual audio-listening test on the target laptop is still necessary.
+
+## Start playing
+
+1. Install SuperCollider on Linux and configure a working audio server (PipeWire/JACK/ALSA).
+2. Open `thorax-v0.scd` in SuperCollider IDE and evaluate the main parenthesized block.
+3. Wait for `Thorax-SC v0.1 running` in the post window.
+4. Evaluate any of the control examples at the end of the file.
+5. Stop using `~thoraxStop.value;`.
+
+No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~thoraxTracks[3].set(\sourceMode, 1);`.
+
+**Safety:** Start with low headphone/speaker volume. Feedback is clipped and limited, but the instrument is experimental.
+
+## Features in the first prototype
+
+- Four independently controllable stereo-output tracks with eight-second mono circular capture buffers.
+- Granular playback with position, scan speed, random drift, density, duration, and pitch.
+- An eight-mode per-track resonator bank, smooth distortion, and stereo reverb.
+- Filtered and bounded recirculation of processed audio into the recording buffer.
+- Capture freeze, independently of the read-head scan.
+- A usable self-generating sound source for testing without samples or external hardware.
+
+### Key controls
+
+| Parameter | Meaning |
+| --- | --- |
+| `freeze` | 1 stops recording, 0 resumes |
+| `position` | Normalized grain read position, 0–1 |
+| `scanHz` | Signed cycles per second through the capture buffer |
+| `spray` | Random position drift as buffer fraction |
+| `density` | Average grains per second |
+| `grainDur` | Grain duration in seconds |
+| `pitch` | Signed grain playback rate |
+| `grainMix` | Direct material versus granulated material |
+| `ringMix` | Resonator bank mix |
+| `root` | Base resonator frequency |
+| `ringTime` | Resonator decay |
+| `drive` | Distortion strength |
+| `space` | Reverb wet mix |
+| `feedback` | Bounded return level to the capture buffer |
+| `evolve` | Built-in random modulation depth |
+| `amp` | Per-track level |
+| `sourceMode` | 0 = synthesized internal source; 1 = live stereo input |
+
+## Validation
+
+The repository includes `tests/compile.scd` and a GitHub Actions workflow.
+
+From the repository root with `sclang` installed:
+
+```bash
+QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
+```
+
+It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, without attempting to boot an audio server. The test prints `THORAX_COMPILE_OK` if successful. This does not prove audio playback, CPU performance, or usability.
+
+## Hardware baseline
+
+Initial target: Dell Latitude 7300, 32 GB RAM, Linux, 48 kHz, 256-sample audio buffer. Increase to 512 samples or lower grain density if audio breaks up.
+
+## What is not implemented yet
+
+Sample-file import, scene recall, per-track modulation matrices, cross-track sends, per-stage audio buses, persistent projects, and a dedicated GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design principles and next steps.
+
+## References
+
+- [Torso S-4 overview](https://docs.torsoelectronics.com/s4/what-is-the-s4/s4-overview/)
+- [SuperCollider GrainBuf](https://doc.sccode.org/Classes/GrainBuf.html)
+- [SuperCollider RecordBuf](https://doc.sccode.org/Classes/RecordBuf.html)

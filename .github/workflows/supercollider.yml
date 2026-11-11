@@ -1,0 +1,28 @@
+name: SuperCollider compile
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SuperCollider language and virtual display
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends supercollider-language xvfb
+      - name: Compile SynthDef without an audio device
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 120s xvfb-run -a sclang -D tests/compile.scd 2>&1 | tee /tmp/thorax-sc-compile.log
+          grep -q "THORAX_COMPILE_OK" /tmp/thorax-sc-compile.log
+          if grep -q "ERROR:" /tmp/thorax-sc-compile.log; then
+            echo "SuperCollider reported an error"
+            exit 1
+          fi
