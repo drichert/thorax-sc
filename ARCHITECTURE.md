@@ -46,9 +46,14 @@ Each of the four tracks is a separate instance of the same SynthDef, with its ow
 - [ ] Listen and profile on a Latitude 7300; measure CPU and audio dropouts
 - [ ] Add audio-recording and live-input tests, with deterministic buffer lifecycle
 - [ ] Add stereo capture and stereo granular reading
+- [x] Add a first-pass GUI panel for listening to parameter sweeps (not a production GUI)
 - [ ] Introduce per-track modulation sources and destination mappings
 - [ ] Introduce scenes, macros, and OSC/MIDI control
 - [ ] Explore safe cross-track sends and recursive spectral processing
+
+## Control fluidity experiments
+
+The basic Qt slider panel exists to expose discontinuities and zippering before choosing control smoothing. Keep GUI-driven values distinct from audio-engine smoothing: sliders send numerical Synth.set messages directly, and the engine does not yet apply a dedicated lag stage to every parameter. This is deliberate so audible discontinuities can be identified. The GUI retains the values commanded from that panel per track but does not query parameters back from the Synths.
 
 ## Testing strategy
 

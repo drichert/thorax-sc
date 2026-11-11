@@ -10,6 +10,12 @@ try({
     });
     ~thoraxMakeTrackDef.value.asBytes;
     "THORAX_COMPILE_OK".postln;
+    ~thoraxGuiCompileOnly = true;
+    thisProcess.interpreter.executeFile("thorax-gui.scd");
+    if(~thoraxOpenGUI.isNil, {
+        Error("Thorax GUI function was not loaded").throw;
+    });
+    "THORAX_GUI_COMPILE_OK".postln;
 }, { |error|
     "THORAX_COMPILE_FAILED".postln;
     error.reportError;
