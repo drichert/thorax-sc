@@ -2,7 +2,7 @@
 
 An experimental four-track sound-sculpting instrument written in SuperCollider, inspired by the **behavior**, rather than the hardware interface, of the Torso Electronics S-4.
 
-**Status:** v0.1 exploration. The sound engine and a headless SynthDef compilation test are included. An actual audio-listening test on the target laptop is still necessary.
+**Status:** v0.1 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel and a headless compilation check are included; sound quality and control fluidity are still under evaluation.
 
 ## Start playing
 
@@ -10,7 +10,8 @@ An experimental four-track sound-sculpting instrument written in SuperCollider, 
 2. Open `thorax-v0.scd` in SuperCollider IDE and evaluate the main parenthesized block.
 3. Wait for `Thorax-SC v0.1 running` in the post window.
 4. Evaluate any of the control examples at the end of the file.
-5. Stop using `~thoraxStop.value;`.
+5. For live slider testing, open `thorax-gui.scd` in the SuperCollider IDE and evaluate the parenthesized block after the four tracks are running. The GUI opens automatically.
+6. Stop using `~thoraxStop.value;`.
 
 No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~thoraxTracks[3].set(\sourceMode, 1);`.
 
@@ -47,6 +48,14 @@ No audio files required: each track has its own simple built-in source. You can 
 | `amp` | Per-track level |
 | `sourceMode` | 0 = synthesized internal source; 1 = live stereo input |
 
+## Slider testing panel
+
+The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 15 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
+
+Choose a track with the top-left menu. Drag sliders and listen to whether changes feel smooth, stepped, or abrupt. The panel keeps separate parameter values for each track when you switch, but it **does not poll the server** for commands changed elsewhere, so it should be the sole control surface during a fluidity test.
+
+**Recommended listening sequence:** isolate grains with `ringMix = 0`, `drive = 0`, `feedback = 0`, `space = 0`, then sweep grain length, pitch, scan, and density. Add resonance, drive, and feedback back one at a time. The SILENCE ALL button sets all track levels and feedback to zero; Reset track restores initial levels and parameters for the selected track. Start at low monitoring volume.
+
 ## Validation
 
 The repository includes `tests/compile.scd` and a GitHub Actions workflow.
@@ -57,7 +66,7 @@ From the repository root with `sclang` installed:
 QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
 ```
 
-It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, without attempting to boot an audio server. The test prints `THORAX_COMPILE_OK` if successful. This does not prove audio playback, CPU performance, or usability.
+It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, and parses the GUI source without opening a window. The test prints `THORAX_COMPILE_OK` and `THORAX_GUI_COMPILE_OK` if successful. This does not prove runtime GUI usability or real-time audio behavior.
 
 ## Hardware baseline
 
@@ -65,7 +74,7 @@ Initial target: Dell Latitude 7300, 32 GB RAM, Linux, 48 kHz, 256-sample audio b
 
 ## What is not implemented yet
 
-Sample-file import, scene recall, per-track modulation matrices, cross-track sends, per-stage audio buses, persistent projects, and a dedicated GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
+Sample-file import, scene recall, per-track modulation matrices, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design principles and next steps.
 
