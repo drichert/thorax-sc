@@ -17,8 +17,11 @@ if(~thoraxOpenGUI.isNil, {
             if(~thoraxGuiWindow.isNil, {
                 Error("GUI did not create a window").throw;
             });
-            if(~thoraxGuiRows.size != 15, {
-                Error("Expected 15 slider rows").throw;
+            if(~thoraxGuiRows.size != 16, {
+                Error("Expected 16 slider rows including input gain").throw;
+            });
+            if(~thoraxGuiMakeDefaults.value(0)[\inputGain] != 0.25, {
+                Error("Input gain must default to 0.25").throw;
             });
             ~thoraxOpenModGUI.value;
             if(~thoraxModWindow.isNil, {
