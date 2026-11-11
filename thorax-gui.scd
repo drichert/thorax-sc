@@ -7,6 +7,7 @@
 ~thoraxGuiSpecs = [
     // key, label, min, max, warp, initial
     [\amp,       "Level",        0.0,     0.25, \lin, 0.115],
+    [\inputGain, "Input gain x", 0.0,      2.0, \lin, 0.25],
     [\grainMix,  "Grain mix",    0.0,     1.0,  \lin, 0.8],
     [\density,   "Grains / sec", 0.0,    40.0,  \lin, 15.0],
     [\grainDur,  "Grain length", 0.018,   1.3,  \exp, 0.22],
@@ -135,7 +136,7 @@
                 var key, spec, y, label, slider, readout;
                 key = entry[0];
                 spec = ControlSpec.new(entry[2], entry[3], entry[4]);
-                y = 90 + (index * 33);
+                y = 90 + (index * 30);
                 label = StaticText(window, Rect(18, y, 132, 24));
                 label.string_(entry[1]);
                 slider = Slider(window, Rect(153, y + 2, 508, 20));
@@ -154,7 +155,7 @@
 
             footer = StaticText(window, Rect(18, 601, 755, 61));
             footer.string_(
-                "Drag sliders while listening. Capture freeze and playback scan are independent.\n"
+                "Input gain applies to live input only (0 = mute, 1 = unity, 2 = +6 dB).\n"
                 ++ "SILENCE ALL sets every track's level and feedback to zero.\n"
                 ++ "Numbers reflect changes made in this panel, not external Synth.set commands."
             );
