@@ -57,6 +57,12 @@ Each of the four tracks is a separate instance of the same SynthDef, with its ow
 
 The basic Qt slider panel exists to expose discontinuities and zippering before choosing control smoothing. Keep GUI-driven values distinct from audio-engine smoothing: sliders send numerical Synth.set messages directly, and the engine does not yet apply a dedicated lag stage to every parameter. This is deliberate so audible discontinuities can be identified. The GUI retains the values commanded from that panel per track but does not query parameters back from the Synths.
 
+## Live-input level control
+
+`SoundIn.ar([0, 1])` feeds a per-track `inputGain` control (default 0.25, range 0–2) smoothed by `Lag.kr` over 40 ms. The gain is applied before `material` is used for direct playback, buffer recording, granular processing, and feedback. It does not affect the built-in internal source. This avoids conflating input attenuation with track output level and provides safe testing headroom for external audio.
+
+This is post-capture software gain, **not** an analog interface preamp control. ADC or operating-system clipping must be addressed upstream.
+
 ## First modulation matrix (v0.2)
 
 Each track SynthDef contains four modulation slots with four controls per slot: wave, target, rate, and depth. Default depth and target are zero to preserve the v0.1 sound.
