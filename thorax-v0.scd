@@ -54,10 +54,10 @@
         // A target of zero disables routing. Depth defaults to zero.
         modFor = { |destination|
             (
-                (m1 * (mod1Target == destination))
-                + (m2 * (mod2Target == destination))
-                + (m3 * (mod3Target == destination))
-                + (m4 * (mod4Target == destination))
+                (m1 * ((mod1Target - destination).abs < 0.5))
+                + (m2 * ((mod2Target - destination).abs < 0.5))
+                + (m3 * ((mod3Target - destination).abs < 0.5))
+                + (m4 * ((mod4Target - destination).abs < 0.5))
             ).clip(-1, 1)
         };
 
