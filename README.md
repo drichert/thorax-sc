@@ -2,7 +2,7 @@
 
 An experimental four-track sound-sculpting instrument written in SuperCollider, inspired by the **behavior**, rather than the hardware interface, of the Torso Electronics S-4.
 
-**Status:** v0.1 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel and a headless compilation check are included; sound quality and control fluidity are still under evaluation.
+**Status:** v0.1 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel, an optional draft Akai MPD32 MIDI adapter, and headless compilation checks are included; sound quality and hardware performance are still under evaluation.
 
 ## Start playing
 
@@ -11,7 +11,8 @@ An experimental four-track sound-sculpting instrument written in SuperCollider, 
 3. Wait for `Thorax-SC v0.1 running` in the post window.
 4. Evaluate any of the control examples at the end of the file.
 5. For live slider testing, open `thorax-gui.scd` in the SuperCollider IDE and evaluate the parenthesized block after the four tracks are running. The GUI opens automatically.
-6. Stop using `~thoraxStop.value;`.
+6. Optional: with an Akai MPD32 connected, evaluate `thorax-mpd32.scd` after starting the tracks; learn your controls following [docs/MPD32.md](docs/MPD32.md).
+7. Stop using `~thoraxStop.value;`.
 
 No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~thoraxTracks[3].set(\sourceMode, 1);`.
 
@@ -56,6 +57,14 @@ Choose a track with the top-left menu. Drag sliders and listen to whether change
 
 **Recommended listening sequence:** isolate grains with `ringMix = 0`, `drive = 0`, `feedback = 0`, `space = 0`, then sweep grain length, pitch, scan, and density. Add resonance, drive, and feedback back one at a time. The SILENCE ALL button sets all track levels and feedback to zero; Reset track restores initial levels and parameters for the selected track. Start at low monitoring volume.
 
+## Optional Akai MPD32 MIDI control (draft)
+
+The controller integration is an **optional** file, `thorax-mpd32.scd`, that uses stock SuperCollider MIDI input. No factory MIDI CC or pad note numbers are assumed. Learn one physical control at a time from the connected unit, then print an assignment map you can save locally.
+
+The proposed first-bank layout gives the selected track eight sound-shaping knobs, four independent track-level faders, four effect/mix faders, pads for track selection and capture freeze, and a dedicated SILENCE ALL pad. Hardware bank B, scenes, and modulation macros are reserved for later work. See **[MPD32 setup and layout](docs/MPD32.md)** for learning commands and limitations.
+
+This currently sends `Synth.set` values directly and does **not** synchronize with the testing GUI. The adapter has a single `~thoraxMPD32SetParam` function that can be replaced with a unified parameter/macro dispatcher when the modulation architecture is available. The actual MPD32 hardware has not yet been tested.
+
 ## Validation
 
 The repository includes `tests/compile.scd` and a GitHub Actions workflow.
@@ -66,7 +75,7 @@ From the repository root with `sclang` installed:
 QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
 ```
 
-It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, and parses the GUI source without opening a window. The test prints `THORAX_COMPILE_OK` and `THORAX_GUI_COMPILE_OK` if successful. This does not prove runtime GUI usability or real-time audio behavior.
+It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, parses the GUI source without opening a window, and parses plus logic-tests the MPD32 adapter without requiring a MIDI device. The test prints `THORAX_COMPILE_OK`, `THORAX_GUI_COMPILE_OK`, and `THORAX_MPD32_COMPILE_OK` if successful. This does not prove runtime GUI usability or real-time audio behavior.
 
 ## Hardware baseline
 
@@ -74,7 +83,7 @@ Initial target: Dell Latitude 7300, 32 GB RAM, Linux, 48 kHz, 256-sample audio b
 
 ## What is not implemented yet
 
-Sample-file import, scene recall, per-track modulation matrices, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
+Sample-file import, scene recall, per-track modulation matrices, unified MIDI/GUI parameter state, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design principles and next steps.
 
