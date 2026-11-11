@@ -13,11 +13,69 @@
          scanHz = 0.015, spray = 0.025,
          ringMix = 0.35, root = 110, ringTime = 0.15,
          drive = 0.15, space = 0.35, feedback = 0.2,
-         freeze = 0, evolve = 0.25|
+         freeze = 0, evolve = 0.25,
+         mod1Wave = 0, mod1Target = 0, mod1Rate = 0.12, mod1Depth = 0,
+         mod2Wave = 2, mod2Target = 0, mod2Rate = 0.30, mod2Depth = 0,
+         mod3Wave = 3, mod3Target = 0, mod3Rate = 0.60, mod3Depth = 0,
+         mod4Wave = 4, mod4Target = 0, mod4Rate = 1.00, mod4Depth = 0|
 
         var base, internal, external, material, phase, readPos;
         var grainTrigger, granular, sound, ring, colored;
         var feedbackSignal, recordSignal, outputSignal, drift;
+        var waveSignal, modFor, m1, m2, m3, m4;
+        var effectivePosition, effectiveScan, effectiveSpray, effectiveDensity;
+        var effectiveDuration, effectivePitch, effectiveGrainMix;
+        var effectiveRingMix, effectiveRoot, effectiveRingTime;
+        var effectiveDrive, effectiveSpace, effectiveFeedback;
+
+        // Four per-track modulators run inside scsynth, not over OSC.
+        // Shape indices: 0 sine, 1 triangle, 2 step random,
+        // 3 smooth random, 4 triggered positive decay envelope.
+        waveSignal = { |hz, shape|
+            var rate, envelope;
+            rate = hz.clip(0.03, 20);
+            envelope = Decay2.kr(
+                Impulse.kr(rate), 0.008, (0.40 / rate).clip(0.015, 2.0)
+            ).clip(0, 1);
+            Select.kr(shape.clip(0, 4), [
+                SinOsc.kr(rate), LFTri.kr(rate),
+                LFNoise0.kr(rate), LFNoise1.kr(rate),
+                envelope
+            ])
+        };
+
+        m1 = waveSignal.value(mod1Rate, mod1Wave) * mod1Depth.clip(0, 1);
+        m2 = waveSignal.value(mod2Rate, mod2Wave) * mod2Depth.clip(0, 1);
+        m3 = waveSignal.value(mod3Rate, mod3Wave) * mod3Depth.clip(0, 1);
+        m4 = waveSignal.value(mod4Rate, mod4Wave) * mod4Depth.clip(0, 1);
+
+        // Each modulator routes to exactly one destination; different
+        // modulators may share a destination, and sums are bounded.
+        // A target of zero disables routing. Depth defaults to zero.
+        modFor = { |destination|
+            (
+                (m1 * (mod1Target == destination))
+                + (m2 * (mod2Target == destination))
+                + (m3 * (mod3Target == destination))
+                + (m4 * (mod4Target == destination))
+            ).clip(-1, 1)
+        };
+
+        // Target IDs match the GUI. Audio-safe domains are retained.
+        // Frequencies/time/rate use multiplicative octave scaling.
+        effectivePosition = (position + (modFor.value(1) * 0.30)).wrap(0, 1);
+        effectiveDensity = (density + (modFor.value(2) * 20)).clip(0, 40);
+        effectiveDuration = (grainDur * (2 ** (modFor.value(3) * 2))).clip(0.018, 1.3);
+        effectivePitch = (pitch * (2 ** modFor.value(4))).clip(-4, 4);
+        effectiveScan = (scanHz + (modFor.value(5) * 0.08)).clip(-0.25, 0.25);
+        effectiveSpray = (spray + (modFor.value(6) * 0.12)).clip(0, 0.35);
+        effectiveGrainMix = (grainMix + (modFor.value(7) * 0.50)).clip(0, 1);
+        effectiveRingMix = (ringMix + (modFor.value(8) * 0.50)).clip(0, 1);
+        effectiveRoot = (root * (2 ** (modFor.value(9) * 1.5))).clip(40, 12000);
+        effectiveRingTime = (ringTime * (2 ** (modFor.value(10) * 2))).clip(0.02, 0.8);
+        effectiveDrive = (drive + (modFor.value(11) * 0.50)).clip(0, 1);
+        effectiveSpace = (space + (modFor.value(12) * 0.50)).clip(0, 1);
+        effectiveFeedback = (feedback + (modFor.value(13) * 0.35)).clip(0, 0.85);
 
         // Distinct internal test sources for the four tracks.
         base = 55 * (voice + 1);
@@ -32,33 +90,33 @@
                  + (external * sourceMode.clip(0, 1));
 
         // Independent buffer read position; negative scanHz scans backwards.
-        phase = Phasor.kr(0, scanHz / ControlRate.ir, 0, 1);
-        drift = LFNoise1.kr(0.2 + (evolve * 2)).range(spray.neg, spray);
-        readPos = (phase + position + drift).wrap(0.002, 0.998);
+        phase = Phasor.kr(0, effectiveScan / ControlRate.ir, 0, 1);
+        drift = LFNoise1.kr(0.2 + (evolve * 2)).range(effectiveSpray.neg, effectiveSpray);
+        readPos = (phase + effectivePosition + drift).wrap(0.002, 0.998);
 
         grainTrigger = Dust.kr(
-            density.clip(0, 40) *
+            effectiveDensity *
             (1 + (LFNoise1.kr(0.4) * evolve)).clip(0.1, 1.9)
         );
         granular = GrainBuf.ar(
-            2, grainTrigger, grainDur.clip(0.018, 1.3), buf,
-            pitch.clip(-4, 4), readPos, 2, LFNoise1.kr(1.5), -1, 32
+            2, grainTrigger, effectiveDuration, buf,
+            effectivePitch, readPos, 2, LFNoise1.kr(1.5), -1, 32
         ) * 0.65;
         sound = XFade2.ar(
-            material, granular, grainMix.clip(0, 1).linlin(0, 1, -1, 1)
+            material, granular, effectiveGrainMix.linlin(0, 1, -1, 1)
         );
 
         // Eight prototype resonator modes per channel.
         ring = Mix.fill(8, { |i|
             Ringz.ar(
-                sound * 0.07, (root * (1.31 ** i)).clip(40, 12000),
-                ringTime.clip(0.02, 0.8)
+                sound * 0.07, (effectiveRoot * (1.31 ** i)).clip(40, 12000),
+                effectiveRingTime
             )
         });
         colored = XFade2.ar(
-            sound, ring.tanh, ringMix.clip(0, 1).linlin(0, 1, -1, 1)
+            sound, ring.tanh, effectiveRingMix.linlin(0, 1, -1, 1)
         );
-        colored = (colored * (1 + (drive.clip(0, 1) * 10))).tanh;
+        colored = (colored * (1 + (effectiveDrive * 10))).tanh;
         colored = LeakDC.ar(colored);
 
         // Buffered recirculation, not zero-delay feedback.
@@ -66,7 +124,7 @@
         recordSignal = Limiter.ar(
             LeakDC.ar(
                 (Mix.new(material) * 0.5)
-                + (feedbackSignal * feedback.clip(0, 0.85))
+                + (feedbackSignal * effectiveFeedback)
             ), 0.8
         );
         RecordBuf.ar(
@@ -75,7 +133,7 @@
         );
 
         outputSignal = FreeVerb2.ar(
-            colored[0], colored[1], space.clip(0, 1), 0.72, 0.4
+            colored[0], colored[1], effectiveSpace, 0.72, 0.4
         );
         outputSignal = Limiter.ar(LeakDC.ar(outputSignal * amp), 0.7);
         Out.ar(out, outputSignal);
@@ -150,4 +208,6 @@ if(~thoraxCompileOnly != true, { ~thoraxStart.value; });
 // ~thoraxTracks[2].set(\pitch, -1, \scanHz, -0.02, \space, 0.7);
 // ~thoraxTracks[3].set(\sourceMode, 1); // Stereo live input.
 // ~thoraxTracks.do({ |t| t.set(\amp, 0.07); });
+// Four independent modulators per track, depth = 0 until enabled.
+// ~thoraxTracks[0].set(\mod1Wave, 0, \mod1Target, 1, \mod1Rate, 0.2, \mod1Depth, 0.5);
 // ~thoraxStop.value;
