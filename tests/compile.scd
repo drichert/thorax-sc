@@ -57,6 +57,88 @@ try({
         Error("MPD32 feedback range exceeds safety limit").throw;
     });
 
+    // Standard absolute NRPN (CC99/98 address, CC6/38 data).
+    ~thoraxMPD32Remember.value(\knobs, 0, 300, 0, \nrpn);
+    if(~thoraxMPD32Lookup.value(\knobs, 300, 0, \nrpn) != 0, {
+        Error("MPD32 NRPN mapping lookup failed").throw;
+    });
+    if(~thoraxMPD32Lookup.value(\knobs, 300, 0, \cc).notNil, {
+        Error("MPD32 CC and NRPN mappings collided").throw;
+    });
+    ~thoraxMPD32SelectedTrack = 0;
+    ~thoraxMPD32Last = nil;
+    ~thoraxMPD32HandleCC.value(2, 99, 0);
+    ~thoraxMPD32HandleCC.value(44, 98, 0);
+    if(~thoraxMPD32Last.notNil, {
+        Error("MPD32 NRPN address bytes dispatched without data").throw;
+    });
+    ~thoraxMPD32HandleCC.value(64, 6, 0);
+    ~thoraxMPD32HandleCC.value(1, 38, 0);
+    if(~thoraxMPD32Last[1] != \position or: {
+        (~thoraxMPD32Last[2] - (8193.0 / 16383.0)).abs > 0.00001
+    }, {
+        Error("MPD32 14-bit NRPN scaling or dispatch failed").throw;
+    });
+
+    // Increment and decrement operate on the current value, not a fixed
+    // hardware position, and preserve independent state for each track.
+    ~thoraxMPD32HandleCC.value(0, 96, 0);
+    if((~thoraxMPD32Last[2] - ((8193.0 / 16383.0) + (1.0 / 512.0))).abs > 0.00001, {
+        Error("MPD32 relative NRPN increment failed").throw;
+    });
+    ~thoraxMPD32HandleCC.value(0, 97, 0);
+    if((~thoraxMPD32Last[2] - (8193.0 / 16383.0)).abs > 0.00001, {
+        Error("MPD32 relative NRPN decrement failed").throw;
+    });
+    ~thoraxMPD32SelectedTrack = 1;
+    ~thoraxMPD32HandleCC.value(0, 96, 0);
+    if(~thoraxMPD32Last[0] != 1 or: {
+        (~thoraxMPD32Last[2] - (0.35 + (1.0 / 512.0))).abs > 0.00001
+    }, {
+        Error("MPD32 NRPN per-track relative state failed").throw;
+    });
+
+    // MIDI channel state must be isolated even when NRPN addresses match.
+    ~thoraxMPD32Remember.value(\knobs, 1, 300, 1, \nrpn);
+    ~thoraxMPD32Last = nil;
+    ~thoraxMPD32HandleCC.value(2, 99, 1);
+    ~thoraxMPD32HandleCC.value(44, 98, 1);
+    ~thoraxMPD32HandleCC.value(127, 6, 1);
+    ~thoraxMPD32HandleCC.value(127, 38, 1);
+    if(~thoraxMPD32Last[1] != \scanHz or: {
+        (~thoraxMPD32Last[2] - 0.15).abs > 0.00001
+    }, {
+        Error("MPD32 NRPN channel isolation or upper boundary failed").throw;
+    });
+    ~thoraxMPD32Last = nil;
+    ~thoraxMPD32HandleCC.value(0, 101, 1);
+    ~thoraxMPD32HandleCC.value(0, 6, 1);
+    if(~thoraxMPD32Last.notNil, {
+        Error("MPD32 RPN selection did not cancel NRPN").throw;
+    });
+
+    // NRPN learn waits for data, never learns internal CC 99/98/6/38.
+    ~thoraxMPD32LearnNRPN.value(\knobs, 3);
+    ~thoraxMPD32HandleCC.value(3, 99, 0);
+    ~thoraxMPD32HandleCC.value(4, 98, 0);
+    if(~thoraxMPD32Learning.isNil, {
+        Error("MPD32 NRPN learn completed before data arrived").throw;
+    });
+    ~thoraxMPD32HandleCC.value(0, 96, 0);
+    if(~thoraxMPD32Lookup.value(\knobs, 388, 0, \nrpn) != 3, {
+        Error("MPD32 relative NRPN learn failed").throw;
+    });
+    ~thoraxMPD32LearnCC.value(\knobs, 2);
+    ~thoraxMPD32HandleCC.value(0, 99, 0);
+    ~thoraxMPD32HandleCC.value(0, 98, 0);
+    if(~thoraxMPD32Learning.isNil, {
+        Error("MPD32 CC learn incorrectly captured an NRPN address byte").throw;
+    });
+    ~thoraxMPD32HandleCC.value(76, 70, 0);
+    if(~thoraxMPD32Lookup.value(\knobs, 70, 0, \cc) != 2, {
+        Error("MPD32 CC learn broke with NRPN support").throw;
+    });
+
     ~thoraxMPD32Remember.value(\pads, 0, 36, 9);
     ~thoraxMPD32HandleNoteOn.value(100, 36, 9);
     if(~thoraxMPD32SelectedTrack != 0, {
