@@ -59,11 +59,11 @@ Choose a track with the top-left menu. Drag sliders and listen to whether change
 
 ## Optional Akai MPD32 MIDI control (draft)
 
-The controller integration is an **optional** file, `thorax-mpd32.scd`, that uses stock SuperCollider MIDI input. No factory MIDI CC or pad note numbers are assumed. Learn one physical control at a time from the connected unit, then print an assignment map you can save locally.
+The controller integration is an **optional** file, `thorax-mpd32.scd`, that uses stock SuperCollider MIDI input. No factory MIDI CC, NRPN, or pad note numbers are assumed. Learn one physical control at a time, then print a reusable mapping. The MPD32's endless knobs can use **relative increment/decrement NRPN**; its faders normally remain ordinary 7-bit CC. Conventional absolute 14-bit NRPN is accepted from compatible MIDI senders.
 
 The proposed first-bank layout gives the selected track eight sound-shaping knobs, four independent track-level faders, four effect/mix faders, pads for track selection and capture freeze, and a dedicated SILENCE ALL pad. Hardware bank B, scenes, and modulation macros are reserved for later work. See **[MPD32 setup and layout](docs/MPD32.md)** for learning commands and limitations.
 
-This currently sends `Synth.set` values directly and does **not** synchronize with the testing GUI. The adapter has a single `~thoraxMPD32SetParam` function that can be replaced with a unified parameter/macro dispatcher when the modulation architecture is available. The actual MPD32 hardware has not yet been tested.
+Relative NRPN knobs retain their value per track within the adapter, avoiding the immediate jumps associated with absolute controls. The adapter still sends `Synth.set` values directly and does **not** synchronize with the testing GUI. The adapter has a single `~thoraxMPD32SetParam` function that can be replaced with a unified parameter/macro dispatcher when the modulation architecture is available. The actual MPD32 hardware has not yet been tested.
 
 ## Validation
 
