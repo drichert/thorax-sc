@@ -47,14 +47,30 @@ No audio files required: each track has its own simple built-in source. You can 
 | `evolve` | Built-in random modulation depth |
 | `amp` | Per-track level |
 | `sourceMode` | 0 = synthesized internal source; 1 = live stereo input |
+| `inputGain` | Live-input gain only, 0–2×; default 0.25× (approximately -12 dB). Smoothed over 40 ms. |
 
 ## Slider testing panel
 
-The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 15 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
+The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 16 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
 
 Choose a track with the top-left menu. Drag sliders and listen to whether changes feel smooth, stepped, or abrupt. The panel keeps separate parameter values for each track when you switch, but it **does not poll the server** for commands changed elsewhere, so it should be the sole control surface during a fluidity test.
 
 **Recommended listening sequence:** isolate grains with `ringMix = 0`, `drive = 0`, `feedback = 0`, `space = 0`, then sweep grain length, pitch, scan, and density. Add resonance, drive, and feedback back one at a time. The SILENCE ALL button sets all track levels and feedback to zero; Reset track restores initial levels and parameters for the selected track. Start at low monitoring volume.
+
+### Live input gain staging
+
+Each track now has its own **Input gain x** slider in `thorax-gui.scd`. It applies **only to `SoundIn`**, before the live signal is blended with the internal source, recorded into the circular buffer, granulated, or sent through processing and feedback. It does **not** change the built-in synth level or the track's final `Level` control.
+
+- `0` mutes live input; `0.25` is the default (about -12 dB); `1.0` is unity; `2.0` is +6 dB.
+- A 40 ms server-side ramp avoids abrupt level changes when moving the slider.
+- Select **Source: Input**, start with Input gain at 0.25 or lower, and bring up the track level cautiously. Every track receives the same two hardware input channels, so assigning multiple tracks to live input adds their processed outputs together.
+- **Important:** this gain control cannot repair distortion that has already clipped at your audio interface's ADC or earlier in the OS audio path. If a quiet setting still sounds flattened or crunchy with `grainMix = 0`, `ringMix = 0`, `drive = 0`, `feedback = 0` and `space = 0`, reduce the hardware/OS input gain instead.
+
+Direct control example:
+
+```supercollider
+~thoraxTracks[0].set(\sourceMode, 1, \inputGain, 0.25);
+```
 
 ## Four-modulator system (v0.2 experiment)
 
