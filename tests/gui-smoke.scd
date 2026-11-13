@@ -3,6 +3,8 @@
 (
 ~thoraxModGuiCompileOnly = true;
 thisProcess.interpreter.executeFile("thorax-mod-gui.scd");
+~thoraxSampleGuiCompileOnly = true;
+thisProcess.interpreter.executeFile("thorax-sample-gui.scd");
 ~thoraxGuiCompileOnly = true;
 thisProcess.interpreter.executeFile("thorax-gui.scd");
 if(~thoraxOpenGUI.isNil, {
@@ -33,6 +35,15 @@ if(~thoraxOpenGUI.isNil, {
             if(~thoraxModRows[0][1].items.size != 14, {
                 Error("Expected Off and thirteen modulation destinations").throw;
             });
+            ~thoraxOpenSampleGUI.value;
+            if(~thoraxSampleWindow.isNil, {
+                Error("Sample manager GUI failed to open").throw;
+            });
+            if(~thoraxSampleLabels.size != 4, {
+                Error("Expected four sample-control rows").throw;
+            });
+            "THORAX_SAMPLE_GUI_SMOKE_OK".postln;
+            ~thoraxSampleWindow.close;
             "THORAX_MOD_GUI_SMOKE_OK".postln;
             ~thoraxModWindow.close;
             "THORAX_GUI_SMOKE_OK".postln;
