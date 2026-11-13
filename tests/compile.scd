@@ -16,6 +16,26 @@ try({
         Error("Thorax GUI function was not loaded").throw;
     });
     "THORAX_GUI_COMPILE_OK".postln;
+    ~thoraxModGuiCompileOnly = true;
+    thisProcess.interpreter.executeFile("thorax-mod-gui.scd");
+    if(~thoraxOpenModGUI.isNil, {
+        Error("Thorax modulation GUI function was not loaded").throw;
+    });
+    if(~thoraxModTargetNames.size != 14, {
+        Error("Expected Off plus 13 modulation destinations").throw;
+    });
+    if(~thoraxModControlName.value(0, \wave) != \mod1Wave, {
+        Error("Modulator control naming mismatch").throw;
+    });
+    if(~thoraxModControlName.value(3, \depth) != \mod4Depth, {
+        Error("Fourth modulator control naming mismatch").throw;
+    });
+    if(~thoraxModStates.every({ |tracks|
+        tracks.every({ |slot| (slot[\depth] == 0) and: { slot[\target] == 0 } })
+    }).not, {
+        Error("Modulators must start disconnected and silent").throw;
+    });
+    "THORAX_MOD_COMPILE_OK".postln;
 }, { |error|
     "THORAX_COMPILE_FAILED".postln;
     error.reportError;

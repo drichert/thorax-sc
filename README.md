@@ -47,14 +47,61 @@ No audio files required: each track has its own simple built-in source. You can 
 | `evolve` | Built-in random modulation depth |
 | `amp` | Per-track level |
 | `sourceMode` | 0 = synthesized internal source; 1 = live stereo input |
+| `inputGain` | Live-input gain only, 0–2×; default 0.25× (approximately -12 dB). Smoothed over 40 ms. |
 
 ## Slider testing panel
 
-The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 15 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
+The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 16 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
 
 Choose a track with the top-left menu. Drag sliders and listen to whether changes feel smooth, stepped, or abrupt. The panel keeps separate parameter values for each track when you switch, but it **does not poll the server** for commands changed elsewhere, so it should be the sole control surface during a fluidity test.
 
 **Recommended listening sequence:** isolate grains with `ringMix = 0`, `drive = 0`, `feedback = 0`, `space = 0`, then sweep grain length, pitch, scan, and density. Add resonance, drive, and feedback back one at a time. The SILENCE ALL button sets all track levels and feedback to zero; Reset track restores initial levels and parameters for the selected track. Start at low monitoring volume.
+
+### Live input gain staging
+
+Each track now has its own **Input gain x** slider in `thorax-gui.scd`. It applies **only to `SoundIn`**, before the live signal is blended with the internal source, recorded into the circular buffer, granulated, or sent through processing and feedback. It does **not** change the built-in synth level or the track's final `Level` control.
+
+- `0` mutes live input; `0.25` is the default (about -12 dB); `1.0` is unity; `2.0` is +6 dB.
+- A 40 ms server-side ramp avoids abrupt level changes when moving the slider.
+- Select **Source: Input**, start with Input gain at 0.25 or lower, and bring up the track level cautiously. Every track receives the same two hardware input channels, so assigning multiple tracks to live input adds their processed outputs together.
+- **Important:** this gain control cannot repair distortion that has already clipped at your audio interface's ADC or earlier in the OS audio path. If a quiet setting still sounds flattened or crunchy with `grainMix = 0`, `ringMix = 0`, `drive = 0`, `feedback = 0` and `space = 0`, reduce the hardware/OS input gain instead.
+
+Direct control example:
+
+```supercollider
+~thoraxTracks[0].set(\sourceMode, 1, \inputGain, 0.25);
+```
+
+## Four-modulator system (v0.2 experiment)
+
+Each track has **four independent, server-side control-rate modulators**. Every slot has its own waveform, destination, speed, and depth. The modulation GUI is a second panel, so you can keep the original base-parameter sliders visible.
+
+With the audio engine running, open `thorax-mod-gui.scd` in SuperCollider IDE and evaluate its parenthesized block (the same procedure as `thorax-gui.scd`). Use the track menu to select an independent set of four slots.
+
+- **Sources:** sine LFO, triangle LFO, stepped random, smoothly interpolated random, and periodically triggered positive decay envelope.
+- **Destinations:** Off, position, density, grain length/pitch, scan speed, position drift, grain mix, resonance mix, resonator pitch/decay, drive, reverb, and feedback.
+- **Range:** speed 0.03–12 Hz in the GUI (20 Hz max in the engine), depth 0–1. For the envelope, speed is the repeat-trigger rate. Stepped random is intentionally discontinuous.
+- **Safety:** all slots start Off, depth 0. Matching destinations sum and clip to +/-1. Final destinations enforce safe ranges, including feedback at 0–0.85.
+- **Architecture:** LFO generation and routing run in scsynth; moving GUI widgets sends parameter updates but no high-rate modulation events.
+
+The panel retains only GUI-originated values; direct `Synth.set` commands do not sync the display. If you restart the engine, re-evaluate the modulation panel to reinitialize its state.
+
+### First listening exercise
+
+On track 1, route sine to **Position**, set rate **0.12 Hz** and depth **0.2**. Slowly increase depth toward 0.5, then compare **Smooth random** and **Stepped random**. Route a **Pulse envelope** to resonance mix at 1–2 Hz for periodic swelling.
+
+Equivalent control message:
+
+```supercollider
+~thoraxTracks[0].set(
+    \mod1Wave, 0, \mod1Target, 1,
+    \mod1Rate, 0.12, \mod1Depth, 0.2
+);
+```
+
+Set `\mod1Depth` or `\mod1Target` to zero to silence/disconnect that slot. The **Disable track** button zeros all four depths of the selected track; **Reset track mods** restores its defaults. Work at low output level when exploring feedback and drive.
+
+Modulation of other modulators, freeze, input selection, and clock sync are outside this first milestone.
 
 ## Validation
 
@@ -66,7 +113,7 @@ From the repository root with `sclang` installed:
 QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
 ```
 
-It compiles the **actual** `\thoraxTrack` SynthDef, including its UGen graph, and parses the GUI source without opening a window. The test prints `THORAX_COMPILE_OK` and `THORAX_GUI_COMPILE_OK` if successful. This does not prove runtime GUI usability or real-time audio behavior.
+It compiles the actual `\thoraxTrack` SynthDef, including its UGen graph, parses both GUI sources, and opens/closes both windows under a virtual display. It checks `THORAX_COMPILE_OK`, `THORAX_GUI_COMPILE_OK`, `THORAX_MOD_COMPILE_OK` and `THORAX_MOD_GUI_SMOKE_OK`. This does not prove audible modulation or real-time CPU performance.
 
 ## Hardware baseline
 
@@ -74,7 +121,7 @@ Initial target: Dell Latitude 7300, 32 GB RAM, Linux, 48 kHz, 256-sample audio b
 
 ## What is not implemented yet
 
-Sample-file import, scene recall, per-track modulation matrices, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
+Sample-file import, scene recall, modulation-to-modulation routing, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design principles and next steps.
 
