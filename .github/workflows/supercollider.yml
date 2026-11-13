@@ -24,6 +24,7 @@ jobs:
           grep -q "THORAX_COMPILE_OK" /tmp/thorax-sc-compile.log
           grep -q "THORAX_GUI_COMPILE_OK" /tmp/thorax-sc-compile.log
           grep -q "THORAX_MOD_COMPILE_OK" /tmp/thorax-sc-compile.log
+          grep -q "THORAX_SAMPLE_COMPILE_OK" /tmp/thorax-sc-compile.log
           if grep -q "ERROR:" /tmp/thorax-sc-compile.log; then
             echo "SuperCollider reported an error"
             exit 1
@@ -35,6 +36,7 @@ jobs:
           timeout 30s xvfb-run -a sclang -D tests/gui-smoke.scd 2>&1 | tee /tmp/thorax-sc-gui.log
           grep -q "THORAX_GUI_SMOKE_OK" /tmp/thorax-sc-gui.log
           grep -q "THORAX_MOD_GUI_SMOKE_OK" /tmp/thorax-sc-gui.log
+          grep -q "THORAX_SAMPLE_GUI_SMOKE_OK" /tmp/thorax-sc-gui.log
           if grep -q "ERROR:" /tmp/thorax-sc-gui.log; then
             echo "SuperCollider GUI test reported an error"
             exit 1
