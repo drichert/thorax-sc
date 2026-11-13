@@ -277,6 +277,11 @@
 };
 
 ~thoraxStop = {
+    // Release synth readers before freeing either the sample or capture buffers.
+    if(~thoraxGroup.notNil, {
+        ~thoraxGroup.free;
+        ~thoraxGroup = nil;
+    });
     // Invalidate any outstanding asynchronous file-read completions.
     ~thoraxSampleSession = (~thoraxSampleSession ? 0) + 1;
     if(~thoraxSampleBuffers.notNil, {
@@ -289,10 +294,6 @@
     ~thoraxSampleModes = nil;
     ~thoraxSampleGeneration = nil;
     ~thoraxSampleStatus = nil;
-    if(~thoraxGroup.notNil, {
-        ~thoraxGroup.free;
-        ~thoraxGroup = nil;
-    });
     if(~thoraxBuffers.notNil, {
         ~thoraxBuffers.do({ |b| b.free; });
         ~thoraxBuffers = nil;
@@ -314,12 +315,9 @@
         Routine({
             s.sync;
 
-            // Clean up any prior prototype instance before replacing buffers.
-            if(~thoraxGroup.notNil, { ~thoraxGroup.free; ~thoraxGroup = nil; });
-            if(~thoraxBuffers.notNil, {
-                ~thoraxBuffers.do({ |b| b.free; });
-                ~thoraxBuffers = nil;
-            });
+            // Cleanup invalidates pending sample-read callbacks from the old
+            // instrument before allocating a new set of capture buffers.
+            ~thoraxStop.value;
             s.sync;
 
             ~thoraxBuffers = Array.fill(4, {
