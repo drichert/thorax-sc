@@ -36,6 +36,26 @@ try({
         Error("Modulators must start disconnected and silent").throw;
     });
     "THORAX_MOD_COMPILE_OK".postln;
+    // The sample manager lives in thorax-v0.scd and uses the same
+    // independently allocated capture buffers regardless of file selection.
+    if(~thoraxLoadSample.isNil or: { ~thoraxUseSample.isNil }, {
+        Error("Sample loading API was not installed").throw;
+    });
+    if(~thoraxUseCapture.isNil or: { ~thoraxUnloadSample.isNil }, {
+        Error("Sample buffer lifecycle API was not installed").throw;
+    });
+    if(~thoraxSampleMaxSeconds != 60, {
+        Error("Unexpected maximum sample duration").throw;
+    });
+    if(~thoraxSampleValidTrack.value(0), {
+        Error("Track access must be disabled before boot").throw;
+    });
+    ~thoraxSampleGuiCompileOnly = true;
+    thisProcess.interpreter.executeFile("thorax-sample-gui.scd");
+    if(~thoraxOpenSampleGUI.isNil or: { ~thoraxSampleRefresh.isNil }, {
+        Error("Sample GUI did not load").throw;
+    });
+    "THORAX_SAMPLE_COMPILE_OK".postln;
 }, { |error|
     "THORAX_COMPILE_FAILED".postln;
     error.reportError;

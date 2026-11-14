@@ -2,7 +2,7 @@
 
 An experimental four-track sound-sculpting instrument written in SuperCollider, inspired by the **behavior**, rather than the hardware interface, of the Torso Electronics S-4.
 
-**Status:** v0.1 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel and a headless compilation check are included; sound quality and control fluidity are still under evaluation.
+**Status:** v0.3 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel and a headless compilation check are included; sound quality and control fluidity are still under evaluation.
 
 ## Start playing
 
@@ -11,7 +11,8 @@ An experimental four-track sound-sculpting instrument written in SuperCollider, 
 3. Wait for `Thorax-SC v0.1 running` in the post window.
 4. Evaluate any of the control examples at the end of the file.
 5. For live slider testing, open `thorax-gui.scd` in the SuperCollider IDE and evaluate the parenthesized block after the four tracks are running. The GUI opens automatically.
-6. Stop using `~thoraxStop.value;`.
+6. For audio files, evaluate `thorax-sample-gui.scd` to open the four-track sample manager.
+7. Stop using `~thoraxStop.value;`.
 
 No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~thoraxTracks[3].set(\sourceMode, 1);`.
 
@@ -20,6 +21,7 @@ No audio files required: each track has its own simple built-in source. You can 
 ## Features in the first prototype
 
 - Four independently controllable stereo-output tracks with eight-second mono circular capture buffers.
+- Per-track sample loading with independent file buffers; preserve and return to live capture without restarting.
 - Granular playback with position, scan speed, random drift, density, duration, and pitch.
 - An eight-mode per-track resonator bank, smooth distortion, and stereo reverb.
 - Filtered and bounded recirculation of processed audio into the recording buffer.
@@ -103,6 +105,28 @@ Set `\mod1Depth` or `\mod1Target` to zero to silence/disconnect that slot. The *
 
 Modulation of other modulators, freeze, input selection, and clock sync are outside this first milestone.
 
+## Sample loading and live capture (v0.3 experiment)
+
+Open `thorax-sample-gui.scd` after starting the engine. Each track has **Load file**, **Use sample**, **Use capture**, and **Unload** controls.
+
+- WAV/AIFF files can be mono or stereo. This first pass reads the **first channel only** into an independent mono buffer; it does not downmix stereo.
+- Files are capped at **60 seconds** of audio (longer files are truncated). Loading is asynchronous, so the synth does not restart while a file is read.
+- When a file finishes loading, that track automatically switches to Sample mode. In Sample mode, both **direct looping playback** and granular playback read the loaded buffer. The existing grain mix, modulation, resonance, distortion, and reverb all continue to work.
+- The original eight-second **capture buffer stays intact** while the sample plays. Recording into the capture buffer is paused automatically in Sample mode. Select **Use capture** to resume using the stored recording and resume writing if capture freeze is off.
+- **Unload** returns to Capture, then frees the sample buffer only after its replacement is installed. If a second load is initiated before the first finishes, the earlier request cannot replace the latest request.
+- Sample files are kept in memory for the session. There is no streaming, persistent sample bank, automatic normalization, or crossfade for switching files yet. Abrupt source switches may click; use low output levels while exploring.
+
+You can control it without the sample GUI:
+
+```supercollider
+~thoraxLoadSample.value(0, "/absolute/path/to/loop.wav"); // track 1, async
+~thoraxUseCapture.value(0); // keep file loaded; return to live capture
+~thoraxUseSample.value(0);  // switch back to that file
+~thoraxUnloadSample.value(0); // return to capture and free sample
+```
+
+**Direct sample playback** follows the soundfile's original sample rate, looping continuously. Grain pitch is corrected for the file's sample rate. The `freeze` control remains unchanged when switching sources.
+
 ## Validation
 
 The repository includes `tests/compile.scd` and a GitHub Actions workflow.
@@ -113,7 +137,7 @@ From the repository root with `sclang` installed:
 QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
 ```
 
-It compiles the actual `\thoraxTrack` SynthDef, including its UGen graph, parses both GUI sources, and opens/closes both windows under a virtual display. It checks `THORAX_COMPILE_OK`, `THORAX_GUI_COMPILE_OK`, `THORAX_MOD_COMPILE_OK` and `THORAX_MOD_GUI_SMOKE_OK`. This does not prove audible modulation or real-time CPU performance.
+It compiles the actual `\thoraxTrack` SynthDef, including its UGen graph, parses all three GUI sources, and opens/closes all three windows under a virtual display. It checks `THORAX_COMPILE_OK`, `THORAX_GUI_COMPILE_OK`, `THORAX_MOD_COMPILE_OK` and `THORAX_MOD_GUI_SMOKE_OK`, `THORAX_SAMPLE_COMPILE_OK`, and `THORAX_SAMPLE_GUI_SMOKE_OK`. This does not prove audible modulation, disk-loading behavior, or real-time CPU performance; those need a real audio server.
 
 ## Hardware baseline
 
@@ -121,7 +145,7 @@ Initial target: Dell Latitude 7300, 32 GB RAM, Linux, 48 kHz, 256-sample audio b
 
 ## What is not implemented yet
 
-Sample-file import, scene recall, modulation-to-modulation routing, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
+Scene recall, modulation-to-modulation routing, cross-track sends, per-stage audio buses, persistent projects, and a production performance GUI. Buffers are mono despite stereo track outputs. The resonator bank has eight modes, not an S-4-equivalent spectral bank.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design principles and next steps.
 

@@ -44,8 +44,10 @@ Each of the four tracks is a separate instance of the same SynthDef, with its ow
 
 - [ ] Verify headless SynthDef compilation in GitHub Actions
 - [ ] Listen and profile on a Latitude 7300; measure CPU and audio dropouts
-- [ ] Add audio-recording and live-input tests, with deterministic buffer lifecycle
+- [x] Add non-destructive mono sample loading with a separate buffer per track
+- [ ] Exercise audio-recording and live-input paths end-to-end on the Latitude
 - [ ] Add stereo capture and stereo granular reading
+- [ ] Add click-free sample switching, stereo-to-mono downmix and sample normalization
 - [x] Add a first-pass GUI panel for listening to parameter sweeps (not a production GUI)
 - [x] Introduce four per-track modulators with source/target/rate/depth routing
 - [ ] Evaluate modulation listening, CPU overhead, and control ranges on the Latitude
@@ -72,6 +74,31 @@ Each slot produces a control-rate waveform. Its selected target determines where
 Final destination limits are enforced after summing modulation, especially feedback. No language-side high-frequency scheduling is required. Stepped random can intentionally produce discontinuities.
 
 Limitations: envelope modes are free-running periodic decays, not audio-following or externally gated; no clock synchronization, modulation-to-modulation routing, phase reset, or persistent scenes.
+
+## Loaded samples versus capture history (v0.3)
+
+Each track owns **two kinds of buffer**: an eight-second mono circular
+capture buffer (`buf`), plus an optional separate loaded-file
+buffer (`sampleBuf`). The server-side `sampleMode`
+selects which buffer feeds granular playback and the direct source.
+Loaded file playback uses `BufRd` at the file's sample rate;
+grain pitch is scaled by `BufRateScale` for files recorded at
+non-server sample rates.
+
+The capture buffer is never overwritten by loading a file. While sample mode
+is active, the capture `RecordBuf` is paused regardless of
+the user's `freeze` value, preserving its history. Returning to
+Capture restores that history and the original freeze behavior.
+
+`SoundFile` validates file metadata; `Buffer.readChannel` asynchronously loads
+the first audio channel into memory (currently max 60 seconds). File loading
+uses generation tokens to ignore stale completion callbacks, plus a session
+token invalidated on engine restart. Old buffers are freed only after a server
+sync confirms that the playback Synth has been pointed elsewhere.
+
+Limitations: mono first-channel import, no streaming or crossfaded file
+transitions, no persistent sample paths across reboot, no automatic peak
+normalization. Source switching can be abrupt; audio validation is essential.
 
 ## Testing strategy
 

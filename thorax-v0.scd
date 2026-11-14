@@ -1,4 +1,4 @@
-// Thorax-SC v0.1: experimental four-track granular feedback instrument.
+// Thorax-SC v0.3: experimental four-track granular feedback instrument.
 // Stock SuperCollider only. Start with low output volume.
 //
 // Evaluate the entire parenthesized block in SuperCollider, or execute this file.
@@ -7,7 +7,7 @@
 (
 ~thoraxMakeTrackDef = {
     SynthDef(\thoraxTrack, {
-        |out = 0, buf = 0, voice = 0, sourceMode = 0, inputGain = 0.25,
+        |out = 0, buf = 0, sampleBuf = 0, sampleMode = 0, voice = 0, sourceMode = 0, inputGain = 0.25,
          amp = 0.13, grainMix = 0.8, density = 15,
          grainDur = 0.22, pitch = 1, position = 0.35,
          scanHz = 0.015, spray = 0.025,
@@ -19,7 +19,8 @@
          mod3Wave = 3, mod3Target = 0, mod3Rate = 0.60, mod3Depth = 0,
          mod4Wave = 4, mod4Target = 0, mod4Rate = 1.00, mod4Depth = 0|
 
-        var base, internal, external, material, phase, readPos;
+        var base, internal, external, material, captureMaterial, sampleDirect;
+        var samplePhase, activeBuf, sampleOn, phase, readPos;
         var grainTrigger, granular, sound, ring, colored;
         var feedbackSignal, recordSignal, outputSignal, drift;
         var waveSignal, modFor, m1, m2, m3, m4;
@@ -88,8 +89,17 @@
         // Attenuate live audio before it reaches direct playback, capture and feedback.
         // A 40 ms ramp prevents level clicks when using the GUI.
         external = SoundIn.ar([0, 1]) * Lag.kr(inputGain.clip(0, 2), 0.04);
-        material = (internal * (1 - sourceMode.clip(0, 1)))
-                 + (external * sourceMode.clip(0, 1));
+        captureMaterial = (internal * (1 - sourceMode.clip(0, 1)))
+                        + (external * sourceMode.clip(0, 1));
+        // Capture history is always in buf. Loaded samples occupy a separate
+        // mono buffer: switching sources never destroys a recording.
+        sampleOn = sampleMode.clip(0, 1);
+        activeBuf = Select.kr(sampleOn, [buf, sampleBuf]);
+        samplePhase = Phasor.ar(
+            0, BufRateScale.kr(activeBuf), 0, BufFrames.kr(activeBuf)
+        );
+        sampleDirect = BufRd.ar(1, activeBuf, samplePhase, 1, 4) ! 2;
+        material = (captureMaterial * (1 - sampleOn)) + (sampleDirect * sampleOn);
 
         // Independent buffer read position; negative scanHz scans backwards.
         phase = Phasor.kr(0, effectiveScan / ControlRate.ir, 0, 1);
@@ -101,8 +111,9 @@
             (1 + (LFNoise1.kr(0.4) * evolve)).clip(0.1, 1.9)
         );
         granular = GrainBuf.ar(
-            2, grainTrigger, effectiveDuration, buf,
-            effectivePitch, readPos, 2, LFNoise1.kr(1.5), -1, 32
+            2, grainTrigger, effectiveDuration, activeBuf,
+            effectivePitch * BufRateScale.kr(activeBuf),
+            readPos, 2, LFNoise1.kr(1.5), -1, 32
         ) * 0.65;
         sound = XFade2.ar(
             material, granular, effectiveGrainMix.linlin(0, 1, -1, 1)
@@ -131,7 +142,7 @@
         );
         RecordBuf.ar(
             recordSignal, buf, 0, 1, 0,
-            1 - freeze.clip(0, 1), 1, 1
+            (1 - freeze.clip(0, 1)) * (1 - sampleOn), 1, 1
         );
 
         outputSignal = FreeVerb2.ar(
@@ -142,11 +153,147 @@
     })
 };
 
+// A GUI may install ~thoraxSampleRefresh. Refresh only on AppClock.
+~thoraxSampleNotify = {
+    if(~thoraxSampleRefresh.notNil, {
+        { ~thoraxSampleRefresh.value; }.defer;
+    });
+};
+
+~thoraxSampleValidTrack = { |track|
+    ~thoraxTracks.notNil and: {
+        track.isInteger and: { (track >= 0) and: { track < 4 } }
+    }
+};
+
+// OSC ordering matters: never free a sample buffer until its replacement
+// has been installed in the playing Synth. This also works from GUI callbacks.
+~thoraxSampleFreeLater = { |buffer|
+    if(buffer.notNil, {
+        Routine({
+            buffer.server.sync;
+            buffer.free;
+        }).play(SystemClock);
+    });
+};
+
+~thoraxUseCapture = { |track|
+    if(~thoraxSampleValidTrack.value(track), {
+        ~thoraxTracks[track].set(\sampleMode, 0);
+        ~thoraxSampleModes[track] = 0;
+        ~thoraxSampleNotify.value;
+    });
+};
+
+~thoraxUseSample = { |track|
+    if(~thoraxSampleValidTrack.value(track), {
+        if(~thoraxSampleBuffers[track].notNil, {
+            ~thoraxTracks[track].set(
+                \sampleBuf, ~thoraxSampleBuffers[track].bufnum, \sampleMode, 1
+            );
+            ~thoraxSampleModes[track] = 1;
+            ~thoraxSampleNotify.value;
+        }, {
+            ("Track " ++ (track + 1) ++ ": load a sample first.").warn;
+        });
+    });
+};
+
+~thoraxUnloadSample = { |track|
+    var old;
+    if(~thoraxSampleValidTrack.value(track), {
+        ~thoraxSampleGeneration[track] = ~thoraxSampleGeneration[track] + 1;
+        old = ~thoraxSampleBuffers[track];
+        ~thoraxSampleBuffers[track] = nil;
+        ~thoraxSamplePaths[track] = nil;
+        ~thoraxSampleModes[track] = 0;
+        ~thoraxSampleStatus[track] = "Capture (no file)";
+        // Restore the valid capture buffer ID before freeing the sample.
+        ~thoraxTracks[track].set(
+            \sampleMode, 0, \sampleBuf, ~thoraxBuffers[track].bufnum
+        );
+        ~thoraxSampleNotify.value;
+        ~thoraxSampleFreeLater.value(old);
+    });
+};
+
+// Load only the first channel for the current mono granular engine.
+// Files longer than one minute are truncated to keep memory bounded.
+~thoraxSampleMaxSeconds = 60;
+~thoraxLoadSample = { |track, path|
+    var soundFile, frames, maxFrames, generation, session, filePath;
+    if(~thoraxSampleValidTrack.value(track).not, {
+        "Start Thorax-SC before loading samples; track must be 0-3.".warn;
+    }, {
+        filePath = path.asString;
+        soundFile = SoundFile.new;
+        if(soundFile.openRead(filePath).not, {
+            ("Cannot open audio file: " ++ filePath).warn;
+        }, {
+            maxFrames = (~thoraxSampleMaxSeconds * soundFile.sampleRate).asInteger;
+            frames = soundFile.numFrames.min(maxFrames);
+            soundFile.close;
+            if(frames < 2, {
+                ("Sample is empty or invalid: " ++ filePath).warn;
+            }, {
+                generation = ~thoraxSampleGeneration[track] + 1;
+                ~thoraxSampleGeneration[track] = generation;
+                session = ~thoraxSampleSession;
+                ~thoraxSampleStatus[track] = "Loading: "
+                    ++ PathName.new(filePath).fileName;
+                ~thoraxSampleNotify.value;
+                Buffer.readChannel(
+                    s, filePath, numFrames: frames, channels: [0],
+                    action: { |newBuffer|
+                        var old;
+                        if(
+                            (~thoraxSampleSession == session) and: {
+                                ~thoraxSampleGeneration.notNil and: {
+                                    ~thoraxSampleGeneration[track] == generation
+                                }
+                            } and: { ~thoraxSampleValidTrack.value(track) },
+                            {
+                                old = ~thoraxSampleBuffers[track];
+                                ~thoraxSampleBuffers[track] = newBuffer;
+                                ~thoraxSamplePaths[track] = filePath;
+                                ~thoraxSampleModes[track] = 1;
+                                ~thoraxSampleStatus[track] = "Sample: "
+                                    ++ PathName.new(filePath).fileName
+                                    ++ " (" ++ (newBuffer.duration.round(0.1)).asString
+                                    ++ " sec)";
+                                ~thoraxTracks[track].set(
+                                    \sampleBuf, newBuffer.bufnum, \sampleMode, 1
+                                );
+                                ~thoraxSampleNotify.value;
+                                ~thoraxSampleFreeLater.value(old);
+                            },
+                            { newBuffer.free; }
+                        );
+                    }
+                );
+            });
+        });
+    });
+};
+
 ~thoraxStop = {
+    // Release synth readers before freeing either the sample or capture buffers.
     if(~thoraxGroup.notNil, {
         ~thoraxGroup.free;
         ~thoraxGroup = nil;
     });
+    // Invalidate any outstanding asynchronous file-read completions.
+    ~thoraxSampleSession = (~thoraxSampleSession ? 0) + 1;
+    if(~thoraxSampleBuffers.notNil, {
+        ~thoraxSampleBuffers.do({ |buffer|
+            if(buffer.notNil, { buffer.free; });
+        });
+    });
+    ~thoraxSampleBuffers = nil;
+    ~thoraxSamplePaths = nil;
+    ~thoraxSampleModes = nil;
+    ~thoraxSampleGeneration = nil;
+    ~thoraxSampleStatus = nil;
     if(~thoraxBuffers.notNil, {
         ~thoraxBuffers.do({ |b| b.free; });
         ~thoraxBuffers = nil;
@@ -168,12 +315,9 @@
         Routine({
             s.sync;
 
-            // Clean up any prior prototype instance before replacing buffers.
-            if(~thoraxGroup.notNil, { ~thoraxGroup.free; ~thoraxGroup = nil; });
-            if(~thoraxBuffers.notNil, {
-                ~thoraxBuffers.do({ |b| b.free; });
-                ~thoraxBuffers = nil;
-            });
+            // Cleanup invalidates pending sample-read callbacks from the old
+            // instrument before allocating a new set of capture buffers.
+            ~thoraxStop.value;
             s.sync;
 
             ~thoraxBuffers = Array.fill(4, {
@@ -193,7 +337,15 @@
                 ])
             });
 
-            "Thorax-SC v0.1 running: four independent tracks.".postln;
+            ~thoraxSampleSession = (~thoraxSampleSession ? 0) + 1;
+            ~thoraxSampleBuffers = Array.fill(4, { nil });
+            ~thoraxSamplePaths = Array.fill(4, { nil });
+            ~thoraxSampleModes = Array.fill(4, { 0 });
+            ~thoraxSampleGeneration = Array.fill(4, { 0 });
+            ~thoraxSampleStatus = Array.fill(4, { "Capture (no file)" });
+            ~thoraxSampleNotify.value;
+
+            "Thorax-SC v0.3 running: four independent tracks.".postln;
             "Control: ~thoraxTracks[0].set(\\freeze, 1, \\scanHz, 0);".postln;
             "Stop: ~thoraxStop.value;".postln;
         }).play(SystemClock);
