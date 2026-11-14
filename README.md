@@ -1,20 +1,26 @@
-# Thorax-SC
+# Erroneus
 
-An experimental four-track sound-sculpting instrument written in SuperCollider, inspired by the **behavior**, rather than the hardware interface, of the Torso Electronics S-4.
+An open-source experimental performance instrument written in SuperCollider. Erroneus is built for granular transformation, rhythmic manipulation, live capture, sample mangling, modulation, and productive musical accidents.
 
 **Status:** v0.3 exploration. The sound engine has played on the target Latitude 7300 at approximately 18% reported server CPU. A sound-design test panel and a headless compilation check are included; sound quality and control fluidity are still under evaluation.
+
+## Design direction
+
+Erroneus explores **gesturally induced chaos**: musical structures that arise through the interaction of audio, modulation, feedback, and performance gestures. Planned areas include independent stereo stems, beat synchronization, time stretching, glitch-heavy rhythmic processing, and radical A/B configuration interpolation. These are design goals, not features of the current prototype.
+
+The instrument favors unexpected results that can be discovered, captured, and developed. It is not intended as a clone of any particular hardware sampler.
 
 ## Start playing
 
 1. Install SuperCollider on Linux and configure a working audio server (PipeWire/JACK/ALSA).
-2. Open `thorax-v0.scd` in SuperCollider IDE and evaluate the main parenthesized block.
-3. Wait for `Thorax-SC v0.1 running` in the post window.
+2. Open `erroneus-v0.scd` in SuperCollider IDE and evaluate the main parenthesized block.
+3. Wait for `Erroneus v0.1 running` in the post window.
 4. Evaluate any of the control examples at the end of the file.
-5. For live slider testing, open `thorax-gui.scd` in the SuperCollider IDE and evaluate the parenthesized block after the four tracks are running. The GUI opens automatically.
-6. For audio files, evaluate `thorax-sample-gui.scd` to open the four-track sample manager.
-7. Stop using `~thoraxStop.value;`.
+5. For live slider testing, open `erroneus-gui.scd` in the SuperCollider IDE and evaluate the parenthesized block after the four tracks are running. The GUI opens automatically.
+6. For audio files, evaluate `erroneus-sample-gui.scd` to open the four-track sample manager.
+7. Stop using `~erroneusStop.value;`.
 
-No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~thoraxTracks[3].set(\sourceMode, 1);`.
+No audio files required: each track has its own simple built-in source. You can switch a track to live stereo input with `~erroneusTracks[3].set(\sourceMode, 1);`.
 
 **Safety:** Start with low headphone/speaker volume. Feedback is clipped and limited, but the instrument is experimental.
 
@@ -53,7 +59,7 @@ No audio files required: each track has its own simple built-in source. You can 
 
 ## Slider testing panel
 
-The optional `thorax-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 16 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
+The optional `erroneus-gui.scd` opens a simple track-selectable control panel, no extra dependencies. It contains 16 continuously adjustable sliders with current numeric values, plus capture freeze, source selection, reset track, and SILENCE ALL buttons.
 
 Choose a track with the top-left menu. Drag sliders and listen to whether changes feel smooth, stepped, or abrupt. The panel keeps separate parameter values for each track when you switch, but it **does not poll the server** for commands changed elsewhere, so it should be the sole control surface during a fluidity test.
 
@@ -61,7 +67,7 @@ Choose a track with the top-left menu. Drag sliders and listen to whether change
 
 ### Live input gain staging
 
-Each track now has its own **Input gain x** slider in `thorax-gui.scd`. It applies **only to `SoundIn`**, before the live signal is blended with the internal source, recorded into the circular buffer, granulated, or sent through processing and feedback. It does **not** change the built-in synth level or the track's final `Level` control.
+Each track now has its own **Input gain x** slider in `erroneus-gui.scd`. It applies **only to `SoundIn`**, before the live signal is blended with the internal source, recorded into the circular buffer, granulated, or sent through processing and feedback. It does **not** change the built-in synth level or the track's final `Level` control.
 
 - `0` mutes live input; `0.25` is the default (about -12 dB); `1.0` is unity; `2.0` is +6 dB.
 - A 40 ms server-side ramp avoids abrupt level changes when moving the slider.
@@ -71,14 +77,14 @@ Each track now has its own **Input gain x** slider in `thorax-gui.scd`. It appli
 Direct control example:
 
 ```supercollider
-~thoraxTracks[0].set(\sourceMode, 1, \inputGain, 0.25);
+~erroneusTracks[0].set(\sourceMode, 1, \inputGain, 0.25);
 ```
 
 ## Four-modulator system (v0.2 experiment)
 
 Each track has **four independent, server-side control-rate modulators**. Every slot has its own waveform, destination, speed, and depth. The modulation GUI is a second panel, so you can keep the original base-parameter sliders visible.
 
-With the audio engine running, open `thorax-mod-gui.scd` in SuperCollider IDE and evaluate its parenthesized block (the same procedure as `thorax-gui.scd`). Use the track menu to select an independent set of four slots.
+With the audio engine running, open `erroneus-mod-gui.scd` in SuperCollider IDE and evaluate its parenthesized block (the same procedure as `erroneus-gui.scd`). Use the track menu to select an independent set of four slots.
 
 - **Sources:** sine LFO, triangle LFO, stepped random, smoothly interpolated random, and periodically triggered positive decay envelope.
 - **Destinations:** Off, position, density, grain length/pitch, scan speed, position drift, grain mix, resonance mix, resonator pitch/decay, drive, reverb, and feedback.
@@ -95,7 +101,7 @@ On track 1, route sine to **Position**, set rate **0.12 Hz** and depth **0.2**. 
 Equivalent control message:
 
 ```supercollider
-~thoraxTracks[0].set(
+~erroneusTracks[0].set(
     \mod1Wave, 0, \mod1Target, 1,
     \mod1Rate, 0.12, \mod1Depth, 0.2
 );
@@ -107,7 +113,7 @@ Modulation of other modulators, freeze, input selection, and clock sync are outs
 
 ## Sample loading and live capture (v0.3 experiment)
 
-Open `thorax-sample-gui.scd` after starting the engine. Each track has **Load file**, **Use sample**, **Use capture**, and **Unload** controls.
+Open `erroneus-sample-gui.scd` after starting the engine. Each track has **Load file**, **Use sample**, **Use capture**, and **Unload** controls.
 
 - WAV/AIFF files can be mono or stereo. This first pass reads the **first channel only** into an independent mono buffer; it does not downmix stereo.
 - Files are capped at **60 seconds** of audio (longer files are truncated). Loading is asynchronous, so the synth does not restart while a file is read.
@@ -119,10 +125,10 @@ Open `thorax-sample-gui.scd` after starting the engine. Each track has **Load fi
 You can control it without the sample GUI:
 
 ```supercollider
-~thoraxLoadSample.value(0, "/absolute/path/to/loop.wav"); // track 1, async
-~thoraxUseCapture.value(0); // keep file loaded; return to live capture
-~thoraxUseSample.value(0);  // switch back to that file
-~thoraxUnloadSample.value(0); // return to capture and free sample
+~erroneusLoadSample.value(0, "/absolute/path/to/loop.wav"); // track 1, async
+~erroneusUseCapture.value(0); // keep file loaded; return to live capture
+~erroneusUseSample.value(0);  // switch back to that file
+~erroneusUnloadSample.value(0); // return to capture and free sample
 ```
 
 **Direct sample playback** follows the soundfile's original sample rate, looping continuously. Grain pitch is corrected for the file's sample rate. The `freeze` control remains unchanged when switching sources.
@@ -137,7 +143,7 @@ From the repository root with `sclang` installed:
 QT_QPA_PLATFORM=offscreen sclang -D tests/compile.scd
 ```
 
-It compiles the actual `\thoraxTrack` SynthDef, including its UGen graph, parses all three GUI sources, and opens/closes all three windows under a virtual display. It checks `THORAX_COMPILE_OK`, `THORAX_GUI_COMPILE_OK`, `THORAX_MOD_COMPILE_OK` and `THORAX_MOD_GUI_SMOKE_OK`, `THORAX_SAMPLE_COMPILE_OK`, and `THORAX_SAMPLE_GUI_SMOKE_OK`. This does not prove audible modulation, disk-loading behavior, or real-time CPU performance; those need a real audio server.
+It compiles the actual `\erroneusTrack` SynthDef, including its UGen graph, parses all three GUI sources, and opens/closes all three windows under a virtual display. It checks `ERRONEUS_COMPILE_OK`, `ERRONEUS_GUI_COMPILE_OK`, `ERRONEUS_MOD_COMPILE_OK` and `ERRONEUS_MOD_GUI_SMOKE_OK`, `ERRONEUS_SAMPLE_COMPILE_OK`, and `ERRONEUS_SAMPLE_GUI_SMOKE_OK`. This does not prove audible modulation, disk-loading behavior, or real-time CPU performance; those need a real audio server.
 
 ## Hardware baseline
 

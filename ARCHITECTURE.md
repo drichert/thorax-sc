@@ -1,8 +1,8 @@
-# Thorax-SC architecture
+# Erroneus architecture
 
 ## Goal
 
-Thorax-SC should behave like an instrument, not an effects-rack preset: capture sound continuously, transform it, and selectively feed the resulting audio back into its own history.
+Erroneus should behave like an instrument, not an effects-rack preset: capture sound continuously, transform it, and selectively feed the resulting audio back into its own history. Gestures should be able to disturb a musical state and produce meaningful, sometimes unpredictable, consequences.
 
 The design borrows broad behaviors from the Torso S-4 while leaving routing, modulation, and algorithms open to new experiments.
 
@@ -31,10 +31,17 @@ internal/live source |                             v
 
 Each of the four tracks is a separate instance of the same SynthDef, with its own capture buffer. `RecordBuf` and `GrainBuf` use the same buffer by design. This is a delayed buffer-history feedback system, not a zero-delay audio cycle.
 
+## Emerging design principles
+
+- Keep tempo synchronization optional: stable pulse, independently modulated timelines, and fully free-running behavior must coexist.
+- Support stereo samples and, eventually, four synchronized stereo stems without making stem remixing the only workflow.
+- Treat A/B configuration interpolation as a primary performance gesture, not an afterthought.
+- Preserve audio safety and the ability to capture happy accidents while allowing unpredictable musical results.
+
 ## Near-term decisions
 
 1. Keep the first version monolithic until the combination of grain, resonance, and recirculation sounds worthwhile.
-2. Separate the language-level SynthDef factory from server startup using `~thoraxMakeTrackDef`; this allows headless compilation tests without an audio device.
+2. Separate the language-level SynthDef factory from server startup using `~erroneusMakeTrackDef`; this allows headless compilation tests without an audio device.
 3. Control DSP on the server; manage buffers, scenes, MIDI/OSC, and persistence in sclang.
 4. Add buses and deterministic group ordering as soon as cross-track and per-stage routing enter the engine.
 5. Provide a budget for grains/partials and use bounded feedback, DC blocking, and output limiting.

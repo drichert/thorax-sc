@@ -1,12 +1,12 @@
-// Thorax-SC v0.3: experimental four-track granular feedback instrument.
+// Erroneus v0.3: experimental four-track granular feedback instrument.
 // Stock SuperCollider only. Start with low output volume.
 //
 // Evaluate the entire parenthesized block in SuperCollider, or execute this file.
-// For headless compilation, set ~thoraxCompileOnly = true before loading.
+// For headless compilation, set ~erroneusCompileOnly = true before loading.
 
 (
-~thoraxMakeTrackDef = {
-    SynthDef(\thoraxTrack, {
+~erroneusMakeTrackDef = {
+    SynthDef(\erroneusTrack, {
         |out = 0, buf = 0, sampleBuf = 0, sampleMode = 0, voice = 0, sourceMode = 0, inputGain = 0.25,
          amp = 0.13, grainMix = 0.8, density = 15,
          grainDur = 0.22, pitch = 1, position = 0.35,
@@ -153,22 +153,22 @@
     })
 };
 
-// A GUI may install ~thoraxSampleRefresh. Refresh only on AppClock.
-~thoraxSampleNotify = {
-    if(~thoraxSampleRefresh.notNil, {
-        { ~thoraxSampleRefresh.value; }.defer;
+// A GUI may install ~erroneusSampleRefresh. Refresh only on AppClock.
+~erroneusSampleNotify = {
+    if(~erroneusSampleRefresh.notNil, {
+        { ~erroneusSampleRefresh.value; }.defer;
     });
 };
 
-~thoraxSampleValidTrack = { |track|
-    ~thoraxTracks.notNil and: {
+~erroneusSampleValidTrack = { |track|
+    ~erroneusTracks.notNil and: {
         track.isInteger and: { (track >= 0) and: { track < 4 } }
     }
 };
 
 // OSC ordering matters: never free a sample buffer until its replacement
 // has been installed in the playing Synth. This also works from GUI callbacks.
-~thoraxSampleFreeLater = { |buffer|
+~erroneusSampleFreeLater = { |buffer|
     if(buffer.notNil, {
         Routine({
             buffer.server.sync;
@@ -177,95 +177,95 @@
     });
 };
 
-~thoraxUseCapture = { |track|
-    if(~thoraxSampleValidTrack.value(track), {
-        ~thoraxTracks[track].set(\sampleMode, 0);
-        ~thoraxSampleModes[track] = 0;
-        ~thoraxSampleNotify.value;
+~erroneusUseCapture = { |track|
+    if(~erroneusSampleValidTrack.value(track), {
+        ~erroneusTracks[track].set(\sampleMode, 0);
+        ~erroneusSampleModes[track] = 0;
+        ~erroneusSampleNotify.value;
     });
 };
 
-~thoraxUseSample = { |track|
-    if(~thoraxSampleValidTrack.value(track), {
-        if(~thoraxSampleBuffers[track].notNil, {
-            ~thoraxTracks[track].set(
-                \sampleBuf, ~thoraxSampleBuffers[track].bufnum, \sampleMode, 1
+~erroneusUseSample = { |track|
+    if(~erroneusSampleValidTrack.value(track), {
+        if(~erroneusSampleBuffers[track].notNil, {
+            ~erroneusTracks[track].set(
+                \sampleBuf, ~erroneusSampleBuffers[track].bufnum, \sampleMode, 1
             );
-            ~thoraxSampleModes[track] = 1;
-            ~thoraxSampleNotify.value;
+            ~erroneusSampleModes[track] = 1;
+            ~erroneusSampleNotify.value;
         }, {
             ("Track " ++ (track + 1) ++ ": load a sample first.").warn;
         });
     });
 };
 
-~thoraxUnloadSample = { |track|
+~erroneusUnloadSample = { |track|
     var old;
-    if(~thoraxSampleValidTrack.value(track), {
-        ~thoraxSampleGeneration[track] = ~thoraxSampleGeneration[track] + 1;
-        old = ~thoraxSampleBuffers[track];
-        ~thoraxSampleBuffers[track] = nil;
-        ~thoraxSamplePaths[track] = nil;
-        ~thoraxSampleModes[track] = 0;
-        ~thoraxSampleStatus[track] = "Capture (no file)";
+    if(~erroneusSampleValidTrack.value(track), {
+        ~erroneusSampleGeneration[track] = ~erroneusSampleGeneration[track] + 1;
+        old = ~erroneusSampleBuffers[track];
+        ~erroneusSampleBuffers[track] = nil;
+        ~erroneusSamplePaths[track] = nil;
+        ~erroneusSampleModes[track] = 0;
+        ~erroneusSampleStatus[track] = "Capture (no file)";
         // Restore the valid capture buffer ID before freeing the sample.
-        ~thoraxTracks[track].set(
-            \sampleMode, 0, \sampleBuf, ~thoraxBuffers[track].bufnum
+        ~erroneusTracks[track].set(
+            \sampleMode, 0, \sampleBuf, ~erroneusBuffers[track].bufnum
         );
-        ~thoraxSampleNotify.value;
-        ~thoraxSampleFreeLater.value(old);
+        ~erroneusSampleNotify.value;
+        ~erroneusSampleFreeLater.value(old);
     });
 };
 
 // Load only the first channel for the current mono granular engine.
 // Files longer than one minute are truncated to keep memory bounded.
-~thoraxSampleMaxSeconds = 60;
-~thoraxLoadSample = { |track, path|
+~erroneusSampleMaxSeconds = 60;
+~erroneusLoadSample = { |track, path|
     var soundFile, frames, maxFrames, generation, session, filePath;
-    if(~thoraxSampleValidTrack.value(track).not, {
-        "Start Thorax-SC before loading samples; track must be 0-3.".warn;
+    if(~erroneusSampleValidTrack.value(track).not, {
+        "Start Erroneus before loading samples; track must be 0-3.".warn;
     }, {
         filePath = path.asString;
         soundFile = SoundFile.new;
         if(soundFile.openRead(filePath).not, {
             ("Cannot open audio file: " ++ filePath).warn;
         }, {
-            maxFrames = (~thoraxSampleMaxSeconds * soundFile.sampleRate).asInteger;
+            maxFrames = (~erroneusSampleMaxSeconds * soundFile.sampleRate).asInteger;
             frames = soundFile.numFrames.min(maxFrames);
             soundFile.close;
             if(frames < 2, {
                 ("Sample is empty or invalid: " ++ filePath).warn;
             }, {
-                generation = ~thoraxSampleGeneration[track] + 1;
-                ~thoraxSampleGeneration[track] = generation;
-                session = ~thoraxSampleSession;
-                ~thoraxSampleStatus[track] = "Loading: "
+                generation = ~erroneusSampleGeneration[track] + 1;
+                ~erroneusSampleGeneration[track] = generation;
+                session = ~erroneusSampleSession;
+                ~erroneusSampleStatus[track] = "Loading: "
                     ++ PathName.new(filePath).fileName;
-                ~thoraxSampleNotify.value;
+                ~erroneusSampleNotify.value;
                 Buffer.readChannel(
                     s, filePath, numFrames: frames, channels: [0],
                     action: { |newBuffer|
                         var old;
                         if(
-                            (~thoraxSampleSession == session) and: {
-                                ~thoraxSampleGeneration.notNil and: {
-                                    ~thoraxSampleGeneration[track] == generation
+                            (~erroneusSampleSession == session) and: {
+                                ~erroneusSampleGeneration.notNil and: {
+                                    ~erroneusSampleGeneration[track] == generation
                                 }
-                            } and: { ~thoraxSampleValidTrack.value(track) },
+                            } and: { ~erroneusSampleValidTrack.value(track) },
                             {
-                                old = ~thoraxSampleBuffers[track];
-                                ~thoraxSampleBuffers[track] = newBuffer;
-                                ~thoraxSamplePaths[track] = filePath;
-                                ~thoraxSampleModes[track] = 1;
-                                ~thoraxSampleStatus[track] = "Sample: "
+                                old = ~erroneusSampleBuffers[track];
+                                ~erroneusSampleBuffers[track] = newBuffer;
+                                ~erroneusSamplePaths[track] = filePath;
+                                ~erroneusSampleModes[track] = 1;
+                                ~erroneusSampleStatus[track] = "Sample: "
                                     ++ PathName.new(filePath).fileName
                                     ++ " (" ++ (newBuffer.duration.round(0.1)).asString
                                     ++ " sec)";
-                                ~thoraxTracks[track].set(
+                                ~erroneusTracks[track].set(
                                     \sampleBuf, newBuffer.bufnum, \sampleMode, 1
                                 );
-                                ~thoraxSampleNotify.value;
-                                ~thoraxSampleFreeLater.value(old);
+                                ~erroneusSampleNotify.value;
+                                ~erroneusSampleFreeLater.value(old);
                             },
                             { newBuffer.free; }
                         );
@@ -276,33 +276,33 @@
     });
 };
 
-~thoraxStop = {
+~erroneusStop = {
     // Release synth readers before freeing either the sample or capture buffers.
-    if(~thoraxGroup.notNil, {
-        ~thoraxGroup.free;
-        ~thoraxGroup = nil;
+    if(~erroneusGroup.notNil, {
+        ~erroneusGroup.free;
+        ~erroneusGroup = nil;
     });
     // Invalidate any outstanding asynchronous file-read completions.
-    ~thoraxSampleSession = (~thoraxSampleSession ? 0) + 1;
-    if(~thoraxSampleBuffers.notNil, {
-        ~thoraxSampleBuffers.do({ |buffer|
+    ~erroneusSampleSession = (~erroneusSampleSession ? 0) + 1;
+    if(~erroneusSampleBuffers.notNil, {
+        ~erroneusSampleBuffers.do({ |buffer|
             if(buffer.notNil, { buffer.free; });
         });
     });
-    ~thoraxSampleBuffers = nil;
-    ~thoraxSamplePaths = nil;
-    ~thoraxSampleModes = nil;
-    ~thoraxSampleGeneration = nil;
-    ~thoraxSampleStatus = nil;
-    if(~thoraxBuffers.notNil, {
-        ~thoraxBuffers.do({ |b| b.free; });
-        ~thoraxBuffers = nil;
+    ~erroneusSampleBuffers = nil;
+    ~erroneusSamplePaths = nil;
+    ~erroneusSampleModes = nil;
+    ~erroneusSampleGeneration = nil;
+    ~erroneusSampleStatus = nil;
+    if(~erroneusBuffers.notNil, {
+        ~erroneusBuffers.do({ |b| b.free; });
+        ~erroneusBuffers = nil;
     });
-    ~thoraxTracks = nil;
-    "Thorax-SC stopped".postln;
+    ~erroneusTracks = nil;
+    "Erroneus stopped".postln;
 };
 
-~thoraxStart = {
+~erroneusStart = {
     s = Server.default;
     s.options.sampleRate = 48000;
     s.options.hardwareBufferSize = 256;
@@ -311,24 +311,24 @@
     s.options.numInputBusChannels = 2;
 
     s.waitForBoot({
-        ~thoraxMakeTrackDef.value.add;
+        ~erroneusMakeTrackDef.value.add;
         Routine({
             s.sync;
 
             // Cleanup invalidates pending sample-read callbacks from the old
             // instrument before allocating a new set of capture buffers.
-            ~thoraxStop.value;
+            ~erroneusStop.value;
             s.sync;
 
-            ~thoraxBuffers = Array.fill(4, {
+            ~erroneusBuffers = Array.fill(4, {
                 Buffer.alloc(s, (s.sampleRate * 8).asInteger, 1)
             });
             s.sync;
 
-            ~thoraxGroup = Group.head(s);
-            ~thoraxTracks = Array.fill(4, { |i|
-                Synth.tail(~thoraxGroup, \thoraxTrack, [
-                    \buf, ~thoraxBuffers[i].bufnum,
+            ~erroneusGroup = Group.head(s);
+            ~erroneusTracks = Array.fill(4, { |i|
+                Synth.tail(~erroneusGroup, \erroneusTrack, [
+                    \buf, ~erroneusBuffers[i].bufnum,
                     \voice, i,
                     \root, [55, 80, 135, 220][i],
                     \density, [12, 16, 10, 19][i],
@@ -337,31 +337,31 @@
                 ])
             });
 
-            ~thoraxSampleSession = (~thoraxSampleSession ? 0) + 1;
-            ~thoraxSampleBuffers = Array.fill(4, { nil });
-            ~thoraxSamplePaths = Array.fill(4, { nil });
-            ~thoraxSampleModes = Array.fill(4, { 0 });
-            ~thoraxSampleGeneration = Array.fill(4, { 0 });
-            ~thoraxSampleStatus = Array.fill(4, { "Capture (no file)" });
-            ~thoraxSampleNotify.value;
+            ~erroneusSampleSession = (~erroneusSampleSession ? 0) + 1;
+            ~erroneusSampleBuffers = Array.fill(4, { nil });
+            ~erroneusSamplePaths = Array.fill(4, { nil });
+            ~erroneusSampleModes = Array.fill(4, { 0 });
+            ~erroneusSampleGeneration = Array.fill(4, { 0 });
+            ~erroneusSampleStatus = Array.fill(4, { "Capture (no file)" });
+            ~erroneusSampleNotify.value;
 
-            "Thorax-SC v0.3 running: four independent tracks.".postln;
-            "Control: ~thoraxTracks[0].set(\\freeze, 1, \\scanHz, 0);".postln;
-            "Stop: ~thoraxStop.value;".postln;
+            "Erroneus v0.3 running: four independent tracks.".postln;
+            "Control: ~erroneusTracks[0].set(\\freeze, 1, \\scanHz, 0);".postln;
+            "Stop: ~erroneusStop.value;".postln;
         }).play(SystemClock);
     });
 };
 
-if(~thoraxCompileOnly != true, { ~thoraxStart.value; });
+if(~erroneusCompileOnly != true, { ~erroneusStart.value; });
 )
 
 // After startup, evaluate individual lines:
-// ~thoraxTracks[0].set(\freeze, 1, \scanHz, 0, \position, 0.22);
-// ~thoraxTracks[0].set(\spray, 0.12, \density, 30, \grainDur, 0.09);
-// ~thoraxTracks[1].set(\feedback, 0.65, \drive, 0.5, \ringMix, 0.8);
-// ~thoraxTracks[2].set(\pitch, -1, \scanHz, -0.02, \space, 0.7);
-// ~thoraxTracks[3].set(\sourceMode, 1, \inputGain, 0.25); // Live input at -12 dB approx.
-// ~thoraxTracks.do({ |t| t.set(\amp, 0.07); });
+// ~erroneusTracks[0].set(\freeze, 1, \scanHz, 0, \position, 0.22);
+// ~erroneusTracks[0].set(\spray, 0.12, \density, 30, \grainDur, 0.09);
+// ~erroneusTracks[1].set(\feedback, 0.65, \drive, 0.5, \ringMix, 0.8);
+// ~erroneusTracks[2].set(\pitch, -1, \scanHz, -0.02, \space, 0.7);
+// ~erroneusTracks[3].set(\sourceMode, 1, \inputGain, 0.25); // Live input at -12 dB approx.
+// ~erroneusTracks.do({ |t| t.set(\amp, 0.07); });
 // Four independent modulators per track, depth = 0 until enabled.
-// ~thoraxTracks[0].set(\mod1Wave, 0, \mod1Target, 1, \mod1Rate, 0.2, \mod1Depth, 0.5);
-// ~thoraxStop.value;
+// ~erroneusTracks[0].set(\mod1Wave, 0, \mod1Target, 1, \mod1Rate, 0.2, \mod1Depth, 0.5);
+// ~erroneusStop.value;

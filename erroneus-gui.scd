@@ -1,10 +1,10 @@
-// Thorax-SC: minimal performance testing panel.
-// Load thorax-v0.scd first and wait for the four tracks to start.
+// Erroneus: minimal performance testing panel.
+// Load erroneus-v0.scd first and wait for the four tracks to start.
 // Then evaluate this entire file in SuperCollider IDE.
-// For headless parser validation, set ~thoraxGuiCompileOnly = true first.
+// For headless parser validation, set ~erroneusGuiCompileOnly = true first.
 
 (
-~thoraxGuiSpecs = [
+~erroneusGuiSpecs = [
     // key, label, min, max, warp, initial
     [\amp,       "Level",        0.0,     0.25, \lin, 0.115],
     [\inputGain, "Input gain x", 0.0,      2.0, \lin, 0.25],
@@ -24,10 +24,10 @@
     [\evolve,    "Random evolve", 0.0,    1.0,  \lin, 0.25]
 ];
 
-~thoraxGuiMakeDefaults = { |trackIndex|
+~erroneusGuiMakeDefaults = { |trackIndex|
     var values;
     values = IdentityDictionary.new;
-    ~thoraxGuiSpecs.do({ |entry| values[entry[0]] = entry[5] });
+    ~erroneusGuiSpecs.do({ |entry| values[entry[0]] = entry[5] });
     values[\root] = [55.0, 80.0, 135.0, 220.0][trackIndex];
     values[\density] = [12.0, 16.0, 10.0, 19.0][trackIndex];
     values[\pitch] = [1.0, 0.5, 1.5, -0.75][trackIndex];
@@ -36,20 +36,20 @@
     values
 };
 
-~thoraxGuiSet = { |key, value|
+~erroneusGuiSet = { |key, value|
     var trackIndex;
-    trackIndex = ~thoraxGuiSelectedTrack;
-    if(~thoraxTracks.notNil and: { ~thoraxTracks.size > trackIndex }, {
-        ~thoraxGuiValues[trackIndex][key] = value;
-        ~thoraxTracks[trackIndex].set(key, value);
+    trackIndex = ~erroneusGuiSelectedTrack;
+    if(~erroneusTracks.notNil and: { ~erroneusTracks.size > trackIndex }, {
+        ~erroneusGuiValues[trackIndex][key] = value;
+        ~erroneusTracks[trackIndex].set(key, value);
     });
 };
 
-~thoraxGuiRefresh = {
+~erroneusGuiRefresh = {
     var trackValues;
-    trackValues = ~thoraxGuiValues[~thoraxGuiSelectedTrack];
+    trackValues = ~erroneusGuiValues[~erroneusGuiSelectedTrack];
 
-    ~thoraxGuiRows.do({ |row|
+    ~erroneusGuiRows.do({ |row|
         var value;
         value = trackValues[row[0]];
         // value_ does not trigger slider.action. Switching tracks must
@@ -57,33 +57,33 @@
         row[1].value_(row[3].unmap(value).clip(0.0, 1.0));
         row[2].string_(value.round(0.001).asString);
     });
-    ~thoraxGuiFreezeButton.value_(trackValues[\freeze].asInteger);
-    ~thoraxGuiSourceButton.value_(trackValues[\sourceMode].asInteger);
+    ~erroneusGuiFreezeButton.value_(trackValues[\freeze].asInteger);
+    ~erroneusGuiSourceButton.value_(trackValues[\sourceMode].asInteger);
 };
 
-~thoraxOpenGUI = {
+~erroneusOpenGUI = {
     var window, trackSelector, freezeButton, sourceButton, resetButton;
     var silenceButton, title, footer, rows, rowFactory;
 
-    if(~thoraxTracks.isNil or: { ~thoraxTracks.size != 4 }, {
-        "Start thorax-v0.scd and wait for all four tracks before opening the GUI.".warn;
+    if(~erroneusTracks.isNil or: { ~erroneusTracks.size != 4 }, {
+        "Start erroneus-v0.scd and wait for all four tracks before opening the GUI.".warn;
     }, {
-        if(~thoraxGuiWindow.notNil, {
-            ~thoraxGuiWindow.front;
+        if(~erroneusGuiWindow.notNil, {
+            ~erroneusGuiWindow.front;
         }, {
-            if(~thoraxGuiValues.isNil, {
-                ~thoraxGuiValues = Array.fill(4, { |i|
-                    ~thoraxGuiMakeDefaults.value(i)
+            if(~erroneusGuiValues.isNil, {
+                ~erroneusGuiValues = Array.fill(4, { |i|
+                    ~erroneusGuiMakeDefaults.value(i)
                 });
             });
-            ~thoraxGuiSelectedTrack = 0;
+            ~erroneusGuiSelectedTrack = 0;
             rows = List.new;
 
-            window = Window("Thorax-SC | Control Fluidity Lab", Rect(160, 100, 790, 690));
-            ~thoraxGuiWindow = window;
+            window = Window("Erroneus | Control Fluidity Lab", Rect(160, 100, 790, 690));
+            ~erroneusGuiWindow = window;
 
             title = StaticText(window, Rect(18, 12, 740, 22));
-            title.string_("THORAX-SC  |  v0.1 sound-shaping controls");
+            title.string_("ERRONEUS  |  v0.1 sound-shaping controls");
             title.font_(Font.default.boldVariant);
 
             StaticText(window, Rect(18, 47, 56, 24)).string_("Track");
@@ -97,7 +97,7 @@
                 ["Capture: FROZEN"]
             ]);
             freezeButton.action_({ |button|
-                ~thoraxGuiSet.value(\freeze, button.value);
+                ~erroneusGuiSet.value(\freeze, button.value);
             });
 
             sourceButton = Button(window, Rect(378, 47, 152, 24));
@@ -106,30 +106,30 @@
                 ["Source: Input"]
             ]);
             sourceButton.action_({ |button|
-                ~thoraxGuiSet.value(\sourceMode, button.value);
+                ~erroneusGuiSet.value(\sourceMode, button.value);
             });
 
             resetButton = Button(window, Rect(540, 47, 112, 24));
             resetButton.states_([["Reset track"]]);
             resetButton.action_({
                 var i;
-                i = ~thoraxGuiSelectedTrack;
-                ~thoraxGuiValues[i] = ~thoraxGuiMakeDefaults.value(i);
-                ~thoraxGuiValues[i].keysValuesDo({ |key, value|
-                    ~thoraxTracks[i].set(key, value);
+                i = ~erroneusGuiSelectedTrack;
+                ~erroneusGuiValues[i] = ~erroneusGuiMakeDefaults.value(i);
+                ~erroneusGuiValues[i].keysValuesDo({ |key, value|
+                    ~erroneusTracks[i].set(key, value);
                 });
-                ~thoraxGuiRefresh.value;
+                ~erroneusGuiRefresh.value;
             });
 
             silenceButton = Button(window, Rect(663, 47, 110, 24));
             silenceButton.states_([["SILENCE ALL"]]);
             silenceButton.action_({
                 4.do({ |i|
-                    ~thoraxGuiValues[i][\amp] = 0;
-                    ~thoraxGuiValues[i][\feedback] = 0;
-                    ~thoraxTracks[i].set(\amp, 0, \feedback, 0);
+                    ~erroneusGuiValues[i][\amp] = 0;
+                    ~erroneusGuiValues[i][\feedback] = 0;
+                    ~erroneusTracks[i].set(\amp, 0, \feedback, 0);
                 });
-                ~thoraxGuiRefresh.value;
+                ~erroneusGuiRefresh.value;
             });
 
             rowFactory = { |entry, index|
@@ -144,12 +144,12 @@
                 slider.action_({ |widget|
                     var value;
                     value = spec.map(widget.value);
-                    ~thoraxGuiSet.value(key, value);
+                    ~erroneusGuiSet.value(key, value);
                     readout.string_(value.round(0.001).asString);
                 });
                 rows.add([key, slider, readout, spec]);
             };
-            ~thoraxGuiSpecs.do({ |entry, index|
+            ~erroneusGuiSpecs.do({ |entry, index|
                 rowFactory.value(entry, index);
             });
 
@@ -160,27 +160,27 @@
                 ++ "Numbers reflect changes made in this panel, not external Synth.set commands."
             );
 
-            ~thoraxGuiRows = rows;
-            ~thoraxGuiFreezeButton = freezeButton;
-            ~thoraxGuiSourceButton = sourceButton;
+            ~erroneusGuiRows = rows;
+            ~erroneusGuiFreezeButton = freezeButton;
+            ~erroneusGuiSourceButton = sourceButton;
 
             trackSelector.action_({ |widget|
-                ~thoraxGuiSelectedTrack = widget.value;
-                ~thoraxGuiRefresh.value;
+                ~erroneusGuiSelectedTrack = widget.value;
+                ~erroneusGuiRefresh.value;
             });
             window.onClose_({
-                ~thoraxGuiWindow = nil;
-                ~thoraxGuiRows = nil;
-                ~thoraxGuiFreezeButton = nil;
-                ~thoraxGuiSourceButton = nil;
+                ~erroneusGuiWindow = nil;
+                ~erroneusGuiRows = nil;
+                ~erroneusGuiFreezeButton = nil;
+                ~erroneusGuiSourceButton = nil;
             });
-            ~thoraxGuiRefresh.value;
+            ~erroneusGuiRefresh.value;
             window.front;
         });
     });
 };
 
-if(~thoraxGuiCompileOnly != true, {
-    ~thoraxOpenGUI.value;
+if(~erroneusGuiCompileOnly != true, {
+    ~erroneusOpenGUI.value;
 });
 )

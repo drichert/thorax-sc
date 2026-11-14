@@ -1,19 +1,19 @@
-// Thorax-SC modulation lab: four modulators per selected track.
-// Start thorax-v0.scd first. Evaluate this file in the IDE to open the GUI.
-// For headless syntax checking: ~thoraxModGuiCompileOnly = true.
+// Erroneus modulation lab: four modulators per selected track.
+// Start erroneus-v0.scd first. Evaluate this file in the IDE to open the GUI.
+// For headless syntax checking: ~erroneusModGuiCompileOnly = true.
 
 (
-~thoraxModWaveNames = [
+~erroneusModWaveNames = [
     "Sine", "Triangle", "Stepped random", "Smooth random", "Pulse envelope"
 ];
 
-~thoraxModTargetNames = [
+~erroneusModTargetNames = [
     "Off", "Position", "Density", "Grain length", "Grain pitch",
     "Scan speed", "Position drift", "Grain mix", "Resonance mix",
     "Resonator pitch", "Resonator decay", "Drive", "Reverb", "Feedback"
 ];
 
-~thoraxModDefaultStates = {
+~erroneusModDefaultStates = {
     Array.fill(4, {
         Array.fill(4, { |index|
             var values;
@@ -27,11 +27,11 @@
     })
 };
 
-if(~thoraxModStates.isNil, {
-    ~thoraxModStates = ~thoraxModDefaultStates.value;
+if(~erroneusModStates.isNil, {
+    ~erroneusModStates = ~erroneusModDefaultStates.value;
 });
 
-~thoraxModControlName = { |slot, key|
+~erroneusModControlName = { |slot, key|
     var suffix;
     suffix = switch(key,
         \wave, { "Wave" },
@@ -42,28 +42,28 @@ if(~thoraxModStates.isNil, {
     ("mod" ++ (slot + 1).asString ++ suffix).asSymbol
 };
 
-~thoraxModUpdate = { |slot, key, value|
+~erroneusModUpdate = { |slot, key, value|
     var track;
-    track = ~thoraxModSelectedTrack;
-    ~thoraxModStates[track][slot][key] = value;
-    ~thoraxTracks[track].set(~thoraxModControlName.value(slot, key), value);
+    track = ~erroneusModSelectedTrack;
+    ~erroneusModStates[track][slot][key] = value;
+    ~erroneusTracks[track].set(~erroneusModControlName.value(slot, key), value);
 };
 
-~thoraxModSendTrack = { |track|
+~erroneusModSendTrack = { |track|
     4.do({ |slot|
         [\wave, \target, \rate, \depth].do({ |key|
-            ~thoraxTracks[track].set(
-                ~thoraxModControlName.value(slot, key),
-                ~thoraxModStates[track][slot][key]
+            ~erroneusTracks[track].set(
+                ~erroneusModControlName.value(slot, key),
+                ~erroneusModStates[track][slot][key]
             );
         });
     });
 };
 
-~thoraxModRefresh = {
+~erroneusModRefresh = {
     var states;
-    states = ~thoraxModStates[~thoraxModSelectedTrack];
-    ~thoraxModRows.do({ |row, slot|
+    states = ~erroneusModStates[~erroneusModSelectedTrack];
+    ~erroneusModRows.do({ |row, slot|
         var state;
         state = states[slot];
         // value_ intentionally does not call the corresponding action.
@@ -76,28 +76,28 @@ if(~thoraxModStates.isNil, {
     });
 };
 
-~thoraxOpenModGUI = {
+~erroneusOpenModGUI = {
     var window, trackSelector, resetButton, disableButton;
     var rateSpec, rows, title, note, rowBuilder;
 
-    if(~thoraxTracks.isNil or: { ~thoraxTracks.size != 4 }, {
-        "Start thorax-v0.scd before opening modulation controls.".warn;
+    if(~erroneusTracks.isNil or: { ~erroneusTracks.size != 4 }, {
+        "Start erroneus-v0.scd before opening modulation controls.".warn;
     }, {
-        if(~thoraxModWindow.notNil, {
-            ~thoraxModWindow.front;
+        if(~erroneusModWindow.notNil, {
+            ~erroneusModWindow.front;
         }, {
-            ~thoraxModSelectedTrack = 0;
+            ~erroneusModSelectedTrack = 0;
             rows = List.new;
             rateSpec = ControlSpec.new(0.03, 12, \exp);
 
             window = Window(
-                "Thorax-SC | Modulation Lab",
+                "Erroneus | Modulation Lab",
                 Rect(190, 140, 890, 520)
             );
-            ~thoraxModWindow = window;
+            ~erroneusModWindow = window;
 
             title = StaticText(window, Rect(18, 12, 760, 24));
-            title.string_("THORAX-SC  |  FOUR MODULATORS / TRACK");
+            title.string_("ERRONEUS  |  FOUR MODULATORS / TRACK");
             title.font_(Font.default.boldVariant);
 
             StaticText(window, Rect(18, 49, 55, 24)).string_("Track");
@@ -111,25 +111,25 @@ if(~thoraxModStates.isNil, {
             disableButton.states_([["Disable track"]]);
             disableButton.action_({
                 var t;
-                t = ~thoraxModSelectedTrack;
+                t = ~erroneusModSelectedTrack;
                 4.do({ |i|
-                    ~thoraxModStates[t][i][\depth] = 0;
-                    ~thoraxTracks[t].set(
-                        ~thoraxModControlName.value(i, \depth), 0
+                    ~erroneusModStates[t][i][\depth] = 0;
+                    ~erroneusTracks[t].set(
+                        ~erroneusModControlName.value(i, \depth), 0
                     );
                 });
-                ~thoraxModRefresh.value;
+                ~erroneusModRefresh.value;
             });
 
             resetButton = Button(window, Rect(725, 49, 148, 24));
             resetButton.states_([["Reset track mods"]]);
             resetButton.action_({
                 var defaults, t;
-                t = ~thoraxModSelectedTrack;
-                defaults = ~thoraxModDefaultStates.value;
-                ~thoraxModStates[t] = defaults[t];
-                ~thoraxModSendTrack.value(t);
-                ~thoraxModRefresh.value;
+                t = ~erroneusModSelectedTrack;
+                defaults = ~erroneusModDefaultStates.value;
+                ~erroneusModStates[t] = defaults[t];
+                ~erroneusModSendTrack.value(t);
+                ~erroneusModRefresh.value;
             });
 
             StaticText(window, Rect(16, 89, 70, 20)).string_("Slot");
@@ -147,15 +147,15 @@ if(~thoraxModStates.isNil, {
                 label.string_("MOD " ++ (slot + 1).asString);
 
                 waveMenu = PopUpMenu(window, Rect(92, y, 146, 26));
-                waveMenu.items_(~thoraxModWaveNames);
+                waveMenu.items_(~erroneusModWaveNames);
                 waveMenu.action_({ |widget|
-                    ~thoraxModUpdate.value(slot, \wave, widget.value);
+                    ~erroneusModUpdate.value(slot, \wave, widget.value);
                 });
 
                 targetMenu = PopUpMenu(window, Rect(246, y, 176, 26));
-                targetMenu.items_(~thoraxModTargetNames);
+                targetMenu.items_(~erroneusModTargetNames);
                 targetMenu.action_({ |widget|
-                    ~thoraxModUpdate.value(slot, \target, widget.value);
+                    ~erroneusModUpdate.value(slot, \target, widget.value);
                 });
 
                 rateSlider = Slider(window, Rect(456, y + 2, 144, 20));
@@ -163,14 +163,14 @@ if(~thoraxModStates.isNil, {
                 rateSlider.action_({ |widget|
                     var hz;
                     hz = rateSpec.map(widget.value);
-                    ~thoraxModUpdate.value(slot, \rate, hz);
+                    ~erroneusModUpdate.value(slot, \rate, hz);
                     rateLabel.string_(hz.round(0.001).asString ++ " Hz");
                 });
 
                 depthSlider = Slider(window, Rect(679, y + 2, 109, 20));
                 depthLabel = StaticText(window, Rect(798, y, 75, 24));
                 depthSlider.action_({ |widget|
-                    ~thoraxModUpdate.value(slot, \depth, widget.value);
+                    ~erroneusModUpdate.value(slot, \depth, widget.value);
                     depthLabel.string_(widget.value.round(0.01).asString);
                 });
 
@@ -181,7 +181,7 @@ if(~thoraxModStates.isNil, {
             };
 
             4.do({ |slot| rowBuilder.value(slot); });
-            ~thoraxModRows = rows;
+            ~erroneusModRows = rows;
 
             note = StaticText(window, Rect(18, 444, 846, 62));
             note.string_(
@@ -192,21 +192,21 @@ if(~thoraxModStates.isNil, {
             );
 
             trackSelector.action_({ |widget|
-                ~thoraxModSelectedTrack = widget.value;
-                ~thoraxModRefresh.value;
+                ~erroneusModSelectedTrack = widget.value;
+                ~erroneusModRefresh.value;
             });
 
             window.onClose_({
-                ~thoraxModWindow = nil;
-                ~thoraxModRows = nil;
+                ~erroneusModWindow = nil;
+                ~erroneusModRows = nil;
             });
-            ~thoraxModRefresh.value;
+            ~erroneusModRefresh.value;
             window.front;
         });
     });
 };
 
-if(~thoraxModGuiCompileOnly != true, {
-    ~thoraxOpenModGUI.value;
+if(~erroneusModGuiCompileOnly != true, {
+    ~erroneusOpenModGUI.value;
 });
 )
