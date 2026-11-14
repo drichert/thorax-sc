@@ -39,8 +39,8 @@ No audio files required: each track has its own simple built-in source. You can 
 | Parameter | Meaning |
 | --- | --- |
 | `freeze` | 1 stops recording, 0 resumes |
-| `position` | Normalized grain read position, 0–1 |
-| `scanHz` | Signed cycles per second through the capture buffer |
+| `position` | Live input capture: delay behind recording head (0 = recent, 0.5 = about 4 s ago); sample and internal synth capture: absolute buffer position. |
+| `scanHz` | Relative scan offset, in signed cycles per second. Default 0 holds a constant live-input look-back delay. |
 | `spray` | Random position drift as buffer fraction |
 | `density` | Average grains per second |
 | `grainDur` | Grain duration in seconds |
@@ -133,6 +133,21 @@ You can control it without the sample GUI:
 
 **Direct sample playback** follows the soundfile's original sample rate, looping continuously. Grain pitch is corrected for the file's sample rate. The `freeze` control remains unchanged when switching sources.
 
+### Position reference by source (v0.4 experiment)
+
+- **Input + Capture:** Position is a look-back distance behind the continually advancing eight-second circular recording head. At Position 0.5, the granular reader targets about four seconds behind the latest recording. At Scan Hz 0, that time delay remains steady as new audio arrives.
+- **Synth + Capture:** Position remains an absolute fraction of the circular capture buffer, matching the original behavior.
+- **Loaded sample:** Position stays absolute within the loaded file, regardless of the Source button.
+- **Freeze:** Stops both buffer writing and the mirrored recording-head reference. Position then navigates the preserved audio relative to the frozen head.
+- **Scan and drift:** These still offset the granular read location. The default Scan Hz is now 0, rather than 0.015.
+
+Near Position 0, grains can collide with the active recording location and produce unstable fragments. The recording-head reference is derived from a separate audio-rate phasor using the identical run gate as RecordBuf, not by querying RecordBuf's internal cursor. Verify alignment, freeze behavior and source switching with real audio before treating it as sample-accurate.
+
+**Hands-on test:** Set Source to Input, Use capture, Scan Hz to 0, Position to 0.5, and Grain mix to 1; play a transient, then listen approximately four seconds later. Freeze and move Position to explore the held eight-second window. Repeat with a file and verify Position 0.5 finds its midpoint.
+
+### Performance input direction
+
+Keyboard and mouse are baseline devices for the next gesture surface. An older Wacom Bamboo/Intuos tablet should initially act through mouse-compatible X/Y movement, with pressure and pen buttons explored later through an optional Linux input-to-OSC adapter if supported by the model. Physical MPD32 mapping remains optional. Avoid hard-wiring device events into SynthDefs: gesture sources should converge on a shared set of performance commands and parameters. See ARCHITECTURE.md.
 ## Validation
 
 The repository includes `tests/compile.scd` and a GitHub Actions workflow.
