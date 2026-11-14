@@ -25,6 +25,9 @@ if(~erroneusOpenGUI.isNil, {
             if(~erroneusGuiMakeDefaults.value(0)[\inputGain] != 0.25, {
                 Error("Input gain must default to 0.25").throw;
             });
+            if(~erroneusGuiMakeDefaults.value(0)[\scanHz] != 0, {
+                Error("Scan must default to 0 for stationary input-capture lookback").throw;
+            });
             ~erroneusOpenModGUI.value;
             if(~erroneusModWindow.isNil, {
                 Error("Modulation GUI did not create a window").throw;
