@@ -107,6 +107,25 @@ Limitations: mono first-channel import, no streaming or crossfaded file
 transitions, no persistent sample paths across reboot, no automatic peak
 normalization. Source switching can be abrupt; audio validation is essential.
 
+## Position reference and input gestures (v0.4 exploration)
+
+Position references:
+
+- Input capture: normalized look-back distance from the capture write head, allowing the same delay behind live input to move with newly recorded material.
+- Internal synthesized capture: unchanged absolute address in the circular capture buffer.
+- Loaded file: unchanged absolute address in the loaded buffer.
+- Frozen live capture: look-back is anchored to the stopped write head, so navigation stays stable.
+
+The implementation mirrors the capture write head using an audio-rate Phasor driven by the same recordEnabled gate as RecordBuf. It stops during freeze or sample mode and resumes together with the recorder. The mirror is downsampled to control rate for GrainBuf position selection. A physical write-head readback is not exposed by RecordBuf; live audio tests must confirm that the two advance consistently across pause and resume transitions. Scan Hz defaults to 0 so that a nonmodulated look-back offset is stationary in time; modulation and scan remain additive offsets to the reference.
+
+### Device-independent performance controls
+
+Design the next gesture layer around normalized actions, not assumptions about devices. Start with keyboard shortcuts for track selection, freeze, safe mute and scene/gesture engagement, and a mouse XY performance surface. Later, an Intuos/Bamboo pen can act as a mouse for XY and optionally feed pressure, pen-tip state, and available buttons into the same gesture dispatcher via a Linux-to-OSC bridge. Pressure, tilt and touch features must be detected rather than assumed for an older tablet.
+
+Potential mappings (experiments, not fixed canon): X = state A/B morph, Y = chaos depth; pressure = grain intensity, distortion, or modulation gain; pen-down = engage, pen-up = hold/release; recorded drawn paths = loopable modulation trajectories. When we implement interpolation, that shared control state should be canonical so external MIDI or OSC does not desynchronize Qt sliders or other controllers.
+
+Rate-limit/decimate incoming GUI or tablet events in the control layer, then smooth appropriate parameters on the audio server. Do not send per-sample OSC events. Keep a keyboard-accessible panic/mute action independent of controller focus whenever possible.
+
 ## Testing strategy
 
 The CI check compiles the actual SynthDef with `.asBytes`, which catches language parsing and SynthDef graph construction errors. Since CI has no reliable audio device, real-time signal behavior and audible feedback stability must be checked separately on a configured SuperCollider server.

@@ -13,7 +13,7 @@
     [\grainDur,  "Grain length", 0.018,   1.3,  \exp, 0.22],
     [\pitch,     "Grain pitch", -4.0,     4.0,  \lin, 1.0],
     [\position,  "Position",     0.0,     1.0,  \lin, 0.35],
-    [\scanHz,    "Scan Hz",     -0.20,    0.20, \lin, 0.015],
+    [\scanHz,    "Scan Hz",     -0.20,    0.20, \lin, 0.0],
     [\spray,     "Position drift", 0.0,   0.25, \lin, 0.025],
     [\ringMix,   "Resonance",    0.0,     1.0,  \lin, 0.35],
     [\root,      "Resonator Hz", 40.0, 1000.0,  \exp, 110.0],
@@ -155,9 +155,9 @@
 
             footer = StaticText(window, Rect(18, 601, 755, 61));
             footer.string_(
-                "Input gain applies to live input only (0 = mute, 1 = unity, 2 = +6 dB).\n"
-                ++ "SILENCE ALL sets every track's level and feedback to zero.\n"
-                ++ "Numbers reflect changes made in this panel, not external Synth.set commands."
+                "Input capture Position = delay behind write head; sample/synth = buffer location.\n"
+                ++ "Scan Hz 0 holds that position; Freeze holds the capture reference.\n"
+                ++ "SILENCE ALL mutes every track; values here reflect panel changes only."
             );
 
             ~erroneusGuiRows = rows;

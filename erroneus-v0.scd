@@ -10,7 +10,7 @@
         |out = 0, buf = 0, sampleBuf = 0, sampleMode = 0, voice = 0, sourceMode = 0, inputGain = 0.25,
          amp = 0.13, grainMix = 0.8, density = 15,
          grainDur = 0.22, pitch = 1, position = 0.35,
-         scanHz = 0.015, spray = 0.025,
+         scanHz = 0, spray = 0.025,
          ringMix = 0.35, root = 110, ringTime = 0.15,
          drive = 0.15, space = 0.35, feedback = 0.2,
          freeze = 0, evolve = 0.25,
@@ -21,6 +21,7 @@
 
         var base, internal, external, material, captureMaterial, sampleDirect;
         var samplePhase, activeBuf, sampleOn, phase, readPos;
+        var recordEnabled, captureWriteHead, captureReadPos, absoluteReadPos;
         var grainTrigger, granular, sound, ring, colored;
         var feedbackSignal, recordSignal, outputSignal, drift;
         var waveSignal, modFor, m1, m2, m3, m4;
@@ -94,6 +95,12 @@
         // Capture history is always in buf. Loaded samples occupy a separate
         // mono buffer: switching sources never destroys a recording.
         sampleOn = sampleMode.clip(0, 1);
+        // Use the SAME run gate for recording and the mirrored capture head.
+        // Both hold their position during freeze or sample mode.
+        recordEnabled = (1 - freeze.clip(0, 1)) * (1 - sampleOn);
+        captureWriteHead = A2K.kr(
+            Phasor.ar(0, recordEnabled, 0, BufFrames.kr(buf))
+        ) / BufFrames.kr(buf);
         activeBuf = Select.kr(sampleOn, [buf, sampleBuf]);
         samplePhase = Phasor.ar(
             0, BufRateScale.kr(activeBuf), 0, BufFrames.kr(activeBuf)
@@ -101,10 +108,20 @@
         sampleDirect = BufRd.ar(1, activeBuf, samplePhase, 1, 4) ! 2;
         material = (captureMaterial * (1 - sampleOn)) + (sampleDirect * sampleOn);
 
-        // Independent buffer read position; negative scanHz scans backwards.
+        // Scan and drift offset either reference system. Scan Hz 0 holds
+        // a constant delay behind the live-input write head.
         phase = Phasor.kr(0, effectiveScan / ControlRate.ir, 0, 1);
         drift = LFNoise1.kr(0.2 + (evolve * 2)).range(effectiveSpray.neg, effectiveSpray);
-        readPos = (phase + effectivePosition + drift).wrap(0.002, 0.998);
+        absoluteReadPos = (phase + effectivePosition + drift).wrap(0.002, 0.998);
+        // Only live INPUT capture measures Position behind the write head.
+        // Synth capture and loaded samples retain absolute buffer positions.
+        // Freeze holds captureWriteHead alongside the actual recorder.
+        captureReadPos = (captureWriteHead - effectivePosition + phase + drift)
+            .wrap(0.002, 0.998);
+        readPos = Select.kr(
+            sourceMode.clip(0, 1) * (1 - sampleOn),
+            [absoluteReadPos, captureReadPos]
+        );
 
         grainTrigger = Dust.kr(
             effectiveDensity *
@@ -142,7 +159,7 @@
         );
         RecordBuf.ar(
             recordSignal, buf, 0, 1, 0,
-            (1 - freeze.clip(0, 1)) * (1 - sampleOn), 1, 1
+            recordEnabled, 1, 1
         );
 
         outputSignal = FreeVerb2.ar(
